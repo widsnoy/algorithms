@@ -1,0 +1,232 @@
+\documentclass[a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage[colorlinks,
+linkcolor = black,
+anchorcolor = blue,
+urlcolor = blue,
+citecolor = blue,
+]{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs} % 导入三线表需要的宏包
+\usepackage{longtable}% 导入跨页表格所需宏包
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{amsfonts}
+\usepackage{chemformula}
+\usepackage{cite}
+\usepackage{bookmark}
+\usepackage{chemformula}
+\usepackage[T1]{fontenc}
+\setlength{\parindent}{0pt}
+
+\geometry{left=2.0cm,right=1.5cm,top=2.0cm,bottom=2.0cm}
+\pagestyle{fancy}
+\fancyhead[L]{by widsnoy}
+\fancyhead[R]{\enspace}
+\fancyfoot[C]{\thepage}
+
+\begin{document}
+\fontsize{12pt}{22pt}\selectfont		
+\title{\Huge \textbf{ICPC TEMPLATE}}
+\author{widsnoy}
+\maketitle
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+	
+\lstset{
+	breaklines=true,
+	basicstyle=\fontspec{Fira Code}\zihao{5},
+	keywordstyle=\fontspec{Fira Code SemiBold}\zihao{5},
+	commentstyle=\fontspec{Noto Sans CJK SC}\zihao{5},
+	extendedchars=false,                        % 解决代码跨页时，章节标题，页眉等汉字不显示的问题
+	backgroundcolor=\color[rgb]{0.96,0.96,0.96},
+	keywordstyle=\color{blue}\bfseries,        % 关键字颜色
+	commentstyle=\color{green}, %[rgb]{0,0.6,0},          % 注释颜色
+	stringstyle=\color{red},                  % 字符串颜色
+	showstringspaces=false,                     % 不显示字符串内的空格
+	numbers=left,                               % 显示行号
+	frame=single,                               % 设置代码框形式
+	tabsize=4, 
+	language=c++,
+	captionpos=t,                               % title在上方(在bottom即为b)
+	rulecolor=\color[rgb]{0.8,0.8,0.8}          % 设置代码框颜色
+}  
+\tableofcontents
+\newpage
+
+\section{图论}
+\subsection{最近公共祖先}
+\lstinputlisting[]{./图论/最近公共祖先.cpp}
+
+\subsection{二分图}
+\subsubsection*{最大匹配}
+\lstinputlisting[]{./图论/二分图匹配.cpp}
+
+\subsection{有向图最小路径覆盖问题}
+\lstinputlisting[]{./图论/有向图最小路径覆盖.cpp}
+
+\subsection{网络流}
+\subsubsection{Dinic最大流}
+注意每次清空数组的范围是 $s$ 到 $t$.
+\lstinputlisting[]{./图论/dinic.cpp}
+\subsubsection{最小费用最大流}
+\lstinputlisting[]{./图论/费用流.cpp}
+\subsubsection{最大闭权子图}
+正权点向 S 连边， 负权点向 T 连边。边权为点权的绝对值。原图的边容量设为 INF 。
+
+则最大收益为 $\sum_{v>0}v-mincost$
+
+在最大闭权子图中的点是残量网络中 S 能到达的点。
+
+\subsection{树哈希}
+\lstinputlisting[]{./图论/TreeHash.cpp}
+\subsection{强联通分量}
+\lstinputlisting[]{./图论/tarjan.cpp}
+\subsection{割点和桥}
+\lstinputlisting[]{./图论/割点.cpp}
+\subsection{点双联通分量}
+\lstinputlisting[]{./图论/点双.cpp}
+\subsection{边双联通分量}
+\lstinputlisting[]{./图论/边双.cpp}
+\subsection{2-SAT}
+
+$2 * u$ 代表不选择，$2*u+1$ 代表选择。
+
+也可以求强连通分量。
+
+如果对于一个*x* `sccno`比它的反状态 *x*∧1 的 `sccno` 要小，那么我们用 *x* 这个状态当做答案，否则用它的反状态当做答案。
+
+\lstinputlisting[]{./图论/2sat.cpp}
+
+\section{字符串}
+\subsection{哈希}
+\subsubsection{最长回文子串}
+通过哈希同样可以 $O(n)$ 解决这个问题，具体方法就是记 $R_i$ 表示以 $i$ 作为结尾的最长回文的长度，那么答案就是 $\max_{i=1}^nR_i$。考虑到 $R_i\leq R_{i-1}+2$，因此我们只需要暴力从 $R_{i-1}+2$ 开始递减，直到找到第一个回文即可。记变量 $z$ 表示当前枚举的 $R_i$，初始时为 $0$，则 $z$ 在每次 $i$ 增大的时候都会增大 $2$，之后每次暴力循环都会减少 $1$，故暴力循环最多发生 $2n$ 次，总的时间复杂度为 $O(n)$。
+\subsection{字典树}
+\subsection{维护异或和}
+\lstinputlisting[]{./字符串/TireTree_xorsum.cpp}
+\subsection{KMP}
+\lstinputlisting[]{./字符串/kmp.cpp}
+\subsubsection{字符串最小周期}
+
+设 border 长度为 r
+
+则 $s[i]=s[n-r+i]$
+
+$|T|=n-r$
+\subsubsection{每个前缀的出现次数}
+1. 统计每个前缀在自身的出现次数
+\begin{lstlisting}
+vector<int> ans(n + 1);
+for (int i = 1; i <= n; i++) ans[k[i]]++;
+for (int i = n; i >= 1; i--) ans[k[i]] += ans[i];
+for (int i = 1; i <= n; i++) ans[i]++;
+\end{lstlisting}
+
+2. 统计每个前缀在其他串的出现次数
+
+我们应用来自 Knuth-Morris-Pratt 的技巧：构造一个字符串 $s + \# + t$ 并计算其前缀函数。与第一个问题唯一的不同之处在于，我们只关心与字符串 $t$ 相关的前缀函数值，即 $i \ge n + 1$ 的 $\pi[i]$。有了这些值之后，我们可以同样应用在第一个问题中的算法来解决该问题。
+
+\subsubsection{一个字符串中本质不同子串的数目}
+给定一个长度为 $n$ 的字符串 $s$，我们希望计算其本质不同子串的数目。
+
+我们将迭代的解决该问题。换句话说，在知道了当前的本质不同子串的数目的情况下，我们要找出一种在 $s$ 末尾添加一个字符后重新计算该数目的方法。
+
+令 $k$ 为当前 $s$ 的本质不同子串数量。我们添加一个新的字符 $c$ 至 $s$。显然，会有一些新的子串以字符 $c$ 结尾。我们希望对这些以该字符结尾且我们之前未曾遇到的子串计数。
+
+构造字符串 $t = s + c$ 并将其反转得到字符串 $t^{\sim}$。现在我们的任务变为计算有多少 $t^{\sim}$ 的前缀未在 $t^{\sim}$ 的其余任何地方出现。如果我们计算了 $t^{\sim}$ 的前缀函数最大值 $\pi_{\max}$，那么最长的出现在 $s$ 中的前缀其长度为 $\pi_{\max}$。自然的，所有更短的前缀也出现了。
+
+因此，当添加了一个新字符后新出现的子串数目为 $|s| + 1 - \pi_{\max}$。
+
+所以对于每个添加的字符，我们可以在 $O(n)$ 的时间内计算新子串的数目，故最终复杂度为 $O(n^2)$。
+
+值得注意的是，我们也可以重新计算在头部添加一个字符，或者从尾或者头移除一个字符时的本质不同子串数目。
+
+\subsection{AC自动机}
+\lstinputlisting[]{./字符串/AC.cpp}
+
+\subsection{后缀数组}
+\lstinputlisting[]{./字符串/SA.cpp}
+
+\subsubsection{Manacher}
+对于第 $i$ 个字符为对称轴: 
+
+1. 如果回文串长为奇数, $d[2 * i]/2$ 是半径加上自己的长度
+
+2. 如果长为偶数, $d[2 * i -1]/2$ 是半径的长度, 方向向右. 
+\lstinputlisting[]{./字符串/Manacher.cpp}
+
+\subsection{Z函数}
+$z[i]=lcp(suf_1, suf_i)$
+\lstinputlisting[]{./字符串/Z_function.cpp}
+\section{数学}
+\subsection{线性基}
+\lstinputlisting[]{./数学/线性基.cpp}
+\subsection{多项式}
+\subsubsection{FFT}
+\lstinputlisting[]{./数学/FFT.cpp}
+\subsection{组合数学}
+\subsubsection{小球放盒}
+第二类斯特林数（斯特林子集数）$\begin{Bmatrix}n\\ k\end{Bmatrix}$，也可记做 $S(n,k)$，表示将 $n$ 个两两不同的元素，划分为 $k$ 个互不区分的非空子集的方案数。
+$$
+\begin{Bmatrix}n\\ k\end{Bmatrix}=\begin{Bmatrix}n-1\\ k-1\end{Bmatrix}+k\begin{Bmatrix}n-1\\ k\end{Bmatrix}
+$$
+
+边界是 $\begin{Bmatrix}n\\ 0\end{Bmatrix}=[n=0]$。
+
+假设小球个数为 $n$, 盒子个数为 $m$
+
+1. 小球无标号，盒子有标号，不允许空盒。
+
+   即求解方程 $\sum\limits_{i=1}^mx_i=n$ 解的个数
+
+   即 $\binom{n-1}{m-1}$
+
+2. 小球无标号，盒子有标号，允许空盒。
+
+   令 $y_i=x_i+1$
+
+   即求解方程 $\sum\limits_{i=1}^my_i=n$ 解的个数
+
+   即 $\binom{n+m-1}{m-1}$
+
+3. 小球有标号，盒子有标号，允许空盒。
+
+   即 $m^n$
+
+4. 小球有标号，盒子有标号，不允许空盒。
+
+   $m!\times \begin{Bmatrix}n\\ m\end{Bmatrix}$
+
+5. 小球有标号，盒子无标号，不允许空盒。
+
+   $\begin{Bmatrix}n\\ m\end{Bmatrix}$
+
+6. 小球有标号，盒子无标号，允许空盒。
+
+   $\sum\limits_{i=1}^m\begin{Bmatrix}n\\ i\end{Bmatrix}$
+
+7. 小球无标号，盒子无标号，允许空盒。
+
+   设 $f[i][j]$ 表示 i 个球放入 j 个盒子的方案数。
+
+   1. $i = 0$ 或者 $j = 1$, 方案数为 1
+
+   2. $i < j$, $f[i][j]=f[i][i]$
+
+   3. $i\ge j$, $f[i][j]=f[i-j][j]+f[i][j-1]$
+
+8. 小球无标号，盒子无标号，不允许空盒。
+
+   用 7 的结论，提前在每个盒子放 1 个球。
+
+   方案数就是 $f[n-m][m]$
+
+\end{document}
