@@ -65,6 +65,134 @@ citecolor = blue,
 \subsection{最近公共祖先}
 \lstinputlisting[]{./图论/最近公共祖先.cpp}
 
+\subsection{2-SAT 前缀优化建图}
+
+1. 当前点选择说明之前的前缀都未选择
+
+之前的前缀选择说明当前点位被选择  
+
+2. 之前的前缀选择说明当前前缀被选择
+
+当前前缀未选择说明之前前缀未选择  
+
+3. 当前点选择说明当前前缀选择  
+
+当前前缀未选择说明当前点未选择
+
+\subsection{Kruskal重构树的性质}
+不难发现，原图中两个点之间的所有简单路径上最大边权的最小值 = 最小生成树上两个点之间的简单路径上的最大值 = Kruskal 重构树上两点之间的 LCA 的权值。
+
+也就是说，到点 $x$ 的简单路径上最大边权的最小值 $\leq val$ 的所有点 $y$ 均在 Kruskal 重构树上的某一棵子树内，且恰好为该子树的所有叶子节点。
+
+我们在 Kruskal 重构树上找到 $x$ 到根的路径上权值 $\leq val$ 的最浅的节点。显然这就是所有满足条件的节点所在的子树的根节点。
+
+如果需要求原图中两个点之间的所有简单路径上最小边权的最大值，则在跑 Kruskal 的过程中按边权大到小的顺序加边。
+
+\subsection{广义圆方树}
+\begin{lstlisting}
+int stk[N], n, m, top, cnt, low[N], dfn[N], dfc;
+bool vis[N];
+vector<int> G[N], T[N];
+
+void tarjan(int u) {
+    stk[++top] = u;
+    low[u] = dfn[u] = ++dfc;
+    for (int v : G[u]) {
+        if (!dfn[v]) {
+            tarjan(v);
+            low[u] = min(low[u], low[v]);
+            if (low[v] == dfn[u]) {
+                cnt++;
+                for (int x = 0; x != v; --top) {
+                    x = stk[top];
+                    T[cnt].push_back(x);
+                    T[x].push_back(cnt);
+                    val[cnt]++;
+                }
+                T[cnt].push_back(u);
+                T[u].push_back(cnt);
+                val[cnt]++;
+            }
+        } else low[u] = min(low[u], dfn[v]);
+    }
+}
+int main() {
+    cnt = n;
+    for (int i = 1; i <= n; i++) if (!dfn[i]) {
+        tarjan(i);
+        --top;
+    }
+}
+\end{lstlisting}
+
+\subsection{点分树}
+
+需要注意，点分树上的路径与原来的树完全没有关系。
+
+\begin{lstlisting}
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+
+const int mod = 998244353;
+const int N = 2e5 + 5;
+
+int n, q, val[N], rt, siz[N], SUM, mx[N];
+int faz[N];
+vector<int> T[N];
+bool vis[N];
+
+// 假设树剖已经写好
+
+void getrt(int u, int fa) {
+	siz[u] = 1;
+	mx[u] = 0;
+	for (int v : t.G[u]) if (v != fa && !vis[v]) {
+		getrt(v, u);
+		siz[u] += siz[v];
+		mx[u] = max(mx[u], siz[v]);
+	}
+	mx[u] = max(mx[u], SUM - siz[u]);
+	if (mx[u] < mx[rt]) rt = u;
+}
+void Dfs(int u, int fa) {
+	vis[u] = 1;
+	for (int v : t.G[u]) if (v != fa && !vis[v]) {
+		rt = 0;
+		SUM = siz[v];
+		getrt(v, rt);
+		T[u].push_back(rt);
+		faz[rt] = u;
+		Dfs(rt, rt);
+	}
+}
+
+// 假设动态开点权值线段树已经写好
+
+void dfs(int u, const int now) { // 预处理
+	add(rt1[now], 0, n, dist(faz[now], u), val[u]);
+	add(rt0[now], 0, n, dist(u, now), val[u]);
+	for (int v : T[u]) dfs(v, now);
+}
+void upd(int u, int d) {
+	int x = u;
+	while (true) {
+		add(rt1[u], 0, n, dist(x, faz[u]), d);
+		add(rt0[u], 0, n, dist(x, u), d);
+		if (u == root) break;
+		u = faz[u];
+	}
+}
+int qry(int u, int k) {
+	int ans = query(rt0[u], 0, n, 0, k), x = u;
+	while (u != root) {
+		if (k - dist(faz[u], x) >= 0) ans += query(rt0[faz[u]], 0, n, 0, k - dist(faz[u], x)) - query(rt1[u], 0, n, 0, k - dist(faz[u], x));
+		u = faz[u];
+	}
+	return ans;
+}
+\end{lstlisting}
+
 \subsection{二分图}
 \subsubsection*{最大匹配}
 \lstinputlisting[]{./图论/二分图匹配.cpp}
@@ -104,6 +232,225 @@ $2 * u$ 代表不选择，$2*u+1$ 代表选择。
 如果对于一个*x* `sccno`比它的反状态 *x*∧1 的 `sccno` 要小，那么我们用 *x* 这个状态当做答案，否则用它的反状态当做答案。
 
 \lstinputlisting[]{./图论/2sat.cpp}
+
+\section{数据结构}
+\subsection{李超线段树}
+\begin{lstlisting}
+struct Line {
+	ll k, b;
+} lin[N];
+int lcnt;
+int add_line(ll k, ll b) {
+	lin[++lcnt] = {k, b};
+	return lcnt;
+}
+struct node {
+	int ls, rs, u;
+} tr[N << 2];
+int tot;
+ll calc(int u, ll x) {
+	return lin[u].k * x + lin[u].b;
+}
+bool cmp(int u, int v, ll x) {
+	return calc(u, x) <= calc(v, x); // 如果要求最大值，只需要修改为大于等于
+}
+void pushdown(int &p, int l, int r, int v) {
+	if (!p) p = ++tot;
+	if (l == r) return;
+	int mid = (l + r) >> 1;
+	int &u = tr[p].u, b = cmp(v, u, mid);
+	if (b) swap(u, v);
+	int bl = cmp(v, u, l), br = cmp(v, u, r);
+	if (bl) pushdown(tr[p].ls, l, mid, v);
+	if (br) pushdown(tr[p].rs, mid + 1, r, v);
+}
+void update(int &p, int l, int r, int L, int R, int v) {
+	if (l > R || r < L) return;
+	if (!p) p = ++tot;
+	int mid = (l + r) >> 1;
+	if (l >= L && r <= R) return pushdown(p, l, r, v), void();
+	update(tr[p].ls, l, mid, L, R, v);
+	update(tr[p].rs, mid + 1, r, L, R, v);
+}
+ll query(int p, int l, int r, ll pos) {
+	if (!p) return 1e16;
+	ll res = calc(tr[p].u, pos);
+	int mid = (l + r) >> 1;
+	if (l == r) return res;
+	if (pos <= mid) {
+		res = min(res, query(tr[p].ls, l, mid, pos));
+	} else res = min(res, query(tr[p].rs, mid + 1, r, pos));
+	return res;
+}
+
+int main() {
+	lin[0].b = 1e16;
+	return 0;	
+}
+\end{lstlisting}
+\subsection{Link Cut Tree}
+\begin{lstlisting}
+#include <bits/stdc++.h>
+using namespace std;
+
+const int N = 1e5 + 5;
+int n, m, ch[N][2], f[N], s[N], r[N], v[N];
+
+#define lc ch[x][0]
+#define rc ch[x][1]
+
+bool noroot(int x) {
+	return ch[f[x]][1] == x || ch[f[x]][0] == x;
+}
+void pushup(int x) {
+    s[x] = s[lc] ^ s[rc] ^ v[x];
+}
+void pushr(int x) {
+	swap(lc, rc);
+	r[x] ^= 1; 
+}
+void pushdown(int x) {
+	if (r[x]) {
+		if (lc) pushr(lc);
+		if (rc) pushr(rc);
+		r[x] = 0; 
+	}
+}
+void rotate(int x) {
+	int y = f[x], z = f[y], k = (ch[y][1] == x), w = ch[x][k ^ 1];
+	if (noroot(y)) ch[z][y == ch[z][1]] = x;
+	ch[x][k ^ 1] = y;
+	ch[y][k] = w;
+	f[w] = y;
+	f[y] = x;
+	f[x] = z;
+	pushup(y), pushup(x);
+}
+void update(int x) {
+	if (noroot(x)) update(f[x]);
+	pushdown(x);
+}
+bool get(int x) {
+	return ch[f[x]][1] == x;
+}
+void splay(int x) {
+	update(x);
+	for (int fa; fa = f[x], noroot(x); rotate(x)) {
+        if (noroot(fa)) rotate(get(x) == get(fa) ? fa : x);
+	}
+	pushup(x);
+}
+void access(int x) {
+    int p;
+    for (p = 0; x; p = x, x = f[x]) {
+        splay(x),ch[x][1] = p, pushup(x);
+    }
+}
+void makeroot(int x) {
+	access(x); splay(x);
+	pushr(x);
+}
+int findroot(int x) {
+	access(x);
+	splay(x);
+	while (lc) pushdown(x), x = lc;
+	splay(x);
+	return x;
+}
+void split(int x, int y) {
+	makeroot(x);
+    access(y);splay(y);
+}
+void link(int x, int y) {
+	makeroot(x);
+	if (findroot(y) != x) f[x] = y;
+}
+void cut(int x, int y) {
+	makeroot(x);
+	if (findroot(y) == x && f[y] == x && !ch[y][0]) {
+		f[y] = ch[x][1] = 0;
+		pushup(x);
+	}
+}
+
+int main() {
+    scanf("%d %d", &n, &m);
+    for (int i = 1; i <= n; i++) scanf("%d", &v[i]);
+    while (m--) {
+    	int opt, x, y;
+    	scanf("%d %d %d", &opt, &x, &y);
+    	if (opt == 0) split(x, y), printf("%d\n", s[y]);
+    	if (opt == 1) link(x, y);
+    	if (opt == 2) cut(x, y);
+    	if (opt == 3) splay(x), v[x] = y, pushup(x);
+    }
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{兔队线段树}
+
+求有多少个严格前缀最大值。
+
+线段树保存每个区间为子问题时右部分的答案 res（可以不需要信息可减），和区间的最大值 mx。
+
+calc 考虑一段区间之前有 x 大的数时，区间此时前缀最大数的树目。
+
+1. $x \geq val[lson],\ ans = calc(rson)$
+
+2. $x < val[lson],\ ans = calc(lson) + res[p]$
+
+\begin{lstlisting}
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+
+const int N = 1e5 + 5;
+#define lson (p << 1)
+#define rson ((p << 1) | 1)
+#define mid ((l + r) >> 1)
+int n, m;
+struct node {
+    int s, a, b;
+} tr[N << 2];
+bool cmp(int a, int b, int c, int d) {
+    if (d == 0 && b == 0) return 0;
+    if (d == 0 && a == 0) return 0;
+    if (d == 0) return 1;
+    return a * 1ll * d > c * 1ll * b; 
+}
+int calc(int p, int l, int r, int c, int d) {
+    if (l == r) 
+        return cmp(tr[p].a, tr[p].b, c, d);
+    if (cmp(tr[lson].a, tr[lson].b, c, d)) {
+        return calc(lson, l, mid, c, d) + tr[p].s;
+    }
+    return calc(rson, mid + 1, r, c, d);
+}
+void modify(int p, int l, int r, int pos, int v) {
+    if (l == r) {
+        tr[p] = {0, v, pos};
+        return;
+    }
+    if (pos <= mid) modify(lson, l, mid, pos, v);
+    else modify(rson, mid + 1, r, pos, v);
+    if (cmp(tr[lson].a, tr[lson].b, tr[rson].a, tr[rson].b)) {
+        tr[p] = tr[lson];
+    } else tr[p] = tr[rson];
+    tr[p].s = calc(rson, mid + 1, r, tr[lson].a, tr[lson].b);
+}
+
+int main() {
+    scanf("%d %d", &n, &m);
+    while (m--) {
+        int x, y;
+        scanf("%d %d", &x, &y);
+        modify(1, 1, n, x, y);
+        printf("%d\n", calc(1, 1, n, 0, 0));
+    }
+    return 0;
+}
+\end{lstlisting}
 
 \section{字符串}
 \subsection{哈希}
@@ -155,7 +502,7 @@ for (int i = 1; i <= n; i++) ans[i]++;
 \subsection{后缀数组}
 \lstinputlisting[]{./字符串/SA.cpp}
 
-\subsubsection{Manacher}
+\subsection{Manacher}
 对于第 $i$ 个字符为对称轴: 
 
 1. 如果回文串长为奇数, $d[2 * i]/2$ 是半径加上自己的长度
@@ -167,8 +514,88 @@ for (int i = 1; i <= n; i++) ans[i]++;
 $z[i]=lcp(suf_1, suf_i)$
 \lstinputlisting[]{./字符串/Z_function.cpp}
 \section{数学}
+\subsection{基本预处理}
+\lstinputlisting[]{./数学/基本预处理.cpp}
 \subsection{线性基}
 \lstinputlisting[]{./数学/线性基.cpp}
+\subsection{高斯消元}
+\subsubsection{解线性方程组}
+\lstinputlisting[]{./数学/解线性方程组.cpp}
+\subsubsection{求行阶梯矩阵}
+\lstinputlisting[]{./数学/求行阶梯矩阵.cpp}
+\subsection{矩阵树定理}
+
+一、无向无环图
+
+$A$为邻接矩阵，$A[i][j]=i\to j$的边数
+
+$D$为度数矩阵，$D[i][i]=\sum\limits_{j=1}^n A[i][j]=i$的度数，其他位置为0
+
+基尔霍夫矩阵$K=D-A$,令$K'=K$的去掉第$k$行第$k$列($k$任意)的$n-1$阶主子式
+
+$det(K')=$该无向图生成树个数
+
+特别地，完全图生成树个数是$n^{n-2}$\\
+
+二、加权
+
+求所有生成树边权的乘积之和，需要把邻接矩阵中边的条数改为为边权和
+
+度数矩阵改为$D[i][i]=\sum\limits_{j=1}^n A[i][j]$\\
+
+三、有向图
+
+对于有根外向树，需要把度数矩阵改为入度和，$D[i][i]=\sum\limits_{j=1}^nA[j][i]$
+
+对于有根内向树，需要把度数矩阵改为出度和，$D[i][i]=\sum\limits_{j=1}^nA[i][j]$
+
+类似地，求所有有向生成树边权的乘积之和，需要把邻接矩阵改为入/出边边权和
+
+四、变形：边权和的和
+
+求所有生成树边权和的和，给原先边权为$w$的边赋值为一次多项式$wx+1$，多项式乘法对$x^2$取模，$\prod (w_ix+1)$的一次项系数即为$w_i$之和
+
+\begin{lstlisting}
+struct P {
+	ll x,y;//x是一次项系数, y是常数项
+	P (ll x=0,ll y=0):x(x),y(y){}
+	friend P operator + (const P &u, const P &v) {
+		return P(add(u.x, v.x), add(u.y, v.y));
+	}
+	friend P operator - (const P &u, const P &v) {
+		return P(add(u.x, mod - v.x), add(u.y, mod - v.y));
+	}
+	friend P operator * (const P &u, const P &v) {
+		return P(add(mul(u.x, v.y), mul(u.y, v.x)), mul(u.y, v.y));
+	}
+	friend P operator / (const P &u, const P &v) {
+		ll inv=qpow(v.y, mod-2);
+		return P(add(mul(u.x, v.y), mod - mul(u.y, v.x)) * inv % mod * inv % mod, mul(u.y, inv));
+	}
+};
+P g[N][N];
+ll gauss(P g[N][N],int n){
+	P res(0,1);
+	for(int i=1;i<=n;++i) {
+		int pos=-1;
+		for(int j=i;j<=n;++j){
+			if(g[j][i].y){
+				pos=j;break;
+			}
+		}
+		if(pos==-1)return 0;
+		swap(g[i],g[pos]);
+		if(pos!=i)res=res*P(0,mod-1);
+		res=res*g[i][i];
+		P inv=P(0,1)/g[i][i];
+		for(int j=i+1;j<=n;++j){
+			P t=g[j][i]*inv;
+			for(int k=n;k>=i;--k)g[j][k]=g[j][k]-t*g[i][k];
+		}
+	}
+	return res.x;
+}
+\end{lstlisting}
 \subsection{多项式}
 \subsubsection{FFT}
 \lstinputlisting[]{./数学/FFT.cpp}
@@ -231,4 +658,6 @@ $$
 \section{MISC}
 \subsection{完全平方数判断}
 \lstinputlisting[]{./MISC/完全平方数判断.cpp}
+\subsection{维护区间GCD值}
+\lstinputlisting[]{./MISC/GCDseg.cpp}
 \end{document}
