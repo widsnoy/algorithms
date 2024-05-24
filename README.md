@@ -1,12 +1,1 @@
-# TODO LIST:
-
-## 数学
-### 数论
-...
-### 多项式
-...
-## 字符串
-- [ ] SAM  
-- [ ] PAM
-## 数据结构
-- [ ] 线段树的进阶操作
+My algorithms template

@@ -51,3 +51,29 @@ int LCA(int u, int v) {
     }
     return dep[u] > dep[v] ? v : u;
 }
+
+// O(1) query
+
+int dfn[N], faz[N], dep[N], rnk[N], dfc, st[N][20];
+void dfs(int u, int fa) {
+    dfn[u] = ++dfc; faz[u] = fa; dep[u] = dep[fa] + 1; rnk[dfc] = u;
+    for (auto [v, w] : G[u]) if (v != fa) dfs(v, u);
+}
+int LCA(int u, int v) {
+    if (u == v) return u;
+    if (dfn[u] > dfn[v]) swap(u, v);
+    int l = dfn[u] + 1, r = dfn[v];
+    int k = __lg(r - l + 1);
+    return dep[st[l][k]] < dep[st[r - (1 << k) + 1][k]] ? faz[st[l][k]] : faz[st[r - (1 << k) + 1][k]];
+}
+
+int main() {
+    dfs(1, 0);
+    dep[0] = n + 1;
+    for (int i = 1; i <= n; i++) st[i][0] = rnk[i];
+    for (int j = 1; j < 20; j++) {
+        for (int i = 1; i <= n; i++) {
+            st[i][j] = dep[st[i][j - 1]] <= dep[st[min(n, i + (1 << (j - 1)))][j - 1]] ? st[i][j - 1] : st[min(n, i + (1 << (j - 1)))][j - 1];
+        }
+    }
+}

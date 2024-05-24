@@ -59,7 +59,12 @@ citecolor = blue,
 	rulecolor=\color[rgb]{0.8,0.8,0.8}          % 设置代码框颜色
 }  
 \tableofcontents
-\newpage
+
+\section{动态规划}
+\subsection{回退背包}
+$dp[i][j]$ 表示选择 $i$ 个物品，体积为 $j$ 的方案数  
+$f[i][j]$ 表示不考率其中某个物品，选择 $i$ 个物品，体积为 $j$ 的方案数  
+$dp[i][j]=f[i-1][j-w]+f[i][j]\Rightarrow f[i][j]=dp[i][j]-f[i-1][j-w]$
 
 \section{图论}
 \subsection{最近公共祖先}
@@ -234,6 +239,8 @@ $2 * u$ 代表不选择，$2*u+1$ 代表选择。
 \lstinputlisting[]{./图论/2sat.cpp}
 
 \section{数据结构}
+\subsection{Splay}
+\lstinputlisting[]{./数据结构/splay.cpp}
 \subsection{李超线段树}
 \begin{lstlisting}
 struct Line {
@@ -451,6 +458,15 @@ int main() {
     return 0;
 }
 \end{lstlisting}
+\subsection{线段树分治}
+
+有一个 $n$ 个节点的图。
+
+在 $k$ 时间内有 $m$ 条边会出现后消失。
+
+要求出每一时间段内这个图是否是二分图。
+
+\lstinputlisting[]{./数据结构/线段树分治.cpp}
 
 \section{字符串}
 \subsection{哈希}
@@ -514,8 +530,14 @@ for (int i = 1; i <= n; i++) ans[i]++;
 $z[i]=lcp(suf_1, suf_i)$
 \lstinputlisting[]{./字符串/Z_function.cpp}
 \section{数学}
-\subsection{基本预处理}
-\lstinputlisting[]{./数学/基本预处理.cpp}
+\subsection{基本算法}
+\lstinputlisting[]{./数学/基本算法.cpp}
+\subsection{CRT}
+\lstinputlisting[]{./数学/CRT.cpp}
+\subsection{Lucas}
+\lstinputlisting[]{./数学/Lucas.cpp}
+\subsection{exLucas}
+\lstinputlisting[]{./数学/exLucas.cpp}
 \subsection{线性基}
 \lstinputlisting[]{./数学/线性基.cpp}
 \subsection{高斯消元}
@@ -523,7 +545,10 @@ $z[i]=lcp(suf_1, suf_i)$
 \lstinputlisting[]{./数学/解线性方程组.cpp}
 \subsubsection{求行阶梯矩阵}
 \lstinputlisting[]{./数学/求行阶梯矩阵.cpp}
+\subsubsection{解不定方程}
+\lstinputlisting[]{./数学/解不定方程.cpp}
 \subsection{矩阵树定理}
+
 
 一、无向无环图
 
@@ -599,6 +624,8 @@ ll gauss(P g[N][N],int n){
 \subsection{多项式}
 \subsubsection{FFT}
 \lstinputlisting[]{./数学/FFT.cpp}
+\subsubsection{NTT}
+\lstinputlisting[]{./数学/NTT.cpp}
 \subsection{组合数学}
 \subsubsection{小球放盒}
 第二类斯特林数（斯特林子集数）$\begin{Bmatrix}n\\ k\end{Bmatrix}$，也可记做 $S(n,k)$，表示将 $n$ 个两两不同的元素，划分为 $k$ 个互不区分的非空子集的方案数。
@@ -660,4 +687,6 @@ $$
 \lstinputlisting[]{./MISC/完全平方数判断.cpp}
 \subsection{维护区间GCD值}
 \lstinputlisting[]{./MISC/GCDseg.cpp}
+\subsection{FastIO}
+\lstinputlisting[]{./MISC/FastIO.cpp}
 \end{document}
