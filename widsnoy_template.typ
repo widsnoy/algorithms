@@ -1,7 +1,7 @@
 #set page(
   paper: "us-letter",
   header: align(left)[
-    _endless rain: WQhuanm, xu826281112, widsnoy_
+    _endless rain: widsnoy, WQhuanm, xu826281112_
   ],
   flipped: true
 )
@@ -10,6 +10,16 @@
   numbering: "1."
 )
 #set text(12pt)
+#let style-number(number) = text(gray)[#number]
+#show raw.where(block: true): it => block(
+  fill: luma(240),
+  inset: 10pt,
+  radius: 4pt,
+  width: 100%,
+)[#grid(columns: (1em, 1fr), align: (right, left), column-gutter: 0.7em, row-gutter: 0.6em, ..it.lines
+  .enumerate()
+  .map(((i, line)) => (style-number(i + 1), line))
+  .flatten())]
 
 #outline(
   title: [_widsnoy's *template*_],
@@ -32,7 +42,123 @@
 == 区间筛
 == 数论卷积
 
+= 动态规划
+== 缺1背包
+
 = 图论
+== 找环
+```cpp
+const int N = 5e5 + 5;
+int n, m, col[N], pre[N], pre_edg[N];
+vector<pii> G[N];
+vector<vector<int>> resp, rese;
+//point
+void get_cyc(int u, int v) {
+    if (!resp.empty()) return;
+    vector<int> cyc;
+    cyc.push_back(v);
+    while (true) {
+        v = pre[v];
+        if (v == 0) break;
+        cyc.push_back(v);
+        if (v == u) break;
+    }
+    reverse(cyc.begin(), cyc.end());
+    resp.push_back(cyc);
+}
+// edge
+void get_cyc(int u, int v, int id) {
+    if (!rese.empty()) return;
+    vector<int> cyc;
+    cyc.push_back(id);
+    while (true) {
+        if (pre[v] == 0) break;
+        cyc.push_back(pre_edg[v]);
+        v = pre[v];
+        if (v == u) break;
+    }
+    reverse(cyc.begin(), cyc.end());
+    rese.push_back(cyc);
+}
+void dfs(int u, int edg) {
+    col[u] = 1;
+    for (auto [v, id] : G[u]) if (id != edg) {
+        if (col[v] == 1) {
+            get_cyc(v, u);
+            get_cyc(v, u, id);
+        } else if (col[v] == 0) {
+            pre[v] = u;
+            pre_edg[v] = id;
+            dfs(v, id);         
+        }
+    }
+    col[u] = 2;
+}
+void MAIN() {
+    cin >> n >> m;
+    for (int i = 1; i <= m; i++) {
+        int u, v; cin >> u >> v;
+        // G[u].push_back({v, i});
+        // G[v].push_back({u, i});
+    }
+    for (int i = 1; i <= n; i++) if (!col[i]) dfs(i, -1);
+}
+```
+
+== SPFA乱搞
+```cpp
+mt19937_64 rng(chrono::steady_clock::now().time_since_epoch().count());
+
+const int mod = 998244353;
+const int N = 5e5 + 5;
+const ll inf = 1e17;
+int n, m, s, t, q[N], ql, qr;
+int vis[N], fr[N];
+ll dis[N];
+vector<pii> G[N];
+void MAIN() {
+    cin >> n >> m >> s >> t;
+    for (int i = 1; i <= m; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        G[u].push_back({v, w});
+    }
+    for (int i = 0; i <= n; i++) dis[i] = inf;
+    dis[s] = 0; q[qr] = s; vis[s] = 1;
+    while (ql <= qr) {
+        if (rng() % (qr - ql + 1) == 0) sort(q + ql, q + qr + 1, [](int x, int y) {
+            return dis[x] < dis[y];
+        });
+        int u = q[ql++];
+        vis[u] = 0;
+        for (auto [v, w] : G[u]) {
+            if (dis[u] + w < dis[v]) {
+                dis[v] = dis[u] + w;
+                fr[v] = u;
+                if (!vis[v]) {
+                    if (ql > 0) q[--ql] = v;
+                    else q[++qr] = v;
+                    vis[v] = 1;
+                }
+            }
+        }
+    }
+    if (dis[t] == inf) {
+        cout << "-1\n";
+        return;
+    }
+    cout << dis[t] << ' ';
+    vector<pii> stk;
+    while (t != s) {
+        stk.push_back({fr[t], t});
+        t = fr[t];
+    }
+    reverse(stk.begin(), stk.end());
+    cout << stk.size() << '\n';
+    for (auto [u, v] : stk) cout << u << ' ' << v << '\n';   
+}
+```
+
 == 差分约束
 
 == 竞赛图
@@ -50,10 +176,6 @@
 
 === 边双
 
-== 最短路
-=== dijkstra
-=== spfa (随机版)
-=== bellman_ford
 
 == 二分图匹配
 === 匈牙利算法
@@ -119,6 +241,12 @@
 == 斯特林数
 == 高维前缀和
 
+= 线性代数
+== 线性基
+== 行列式
+== 高斯消元
+
+
 = 多项式
 == 快速数论变换
 
@@ -138,6 +266,7 @@
 === 李超树 (最大，次大，第三大)
 === 合并分裂
 === 线段树二分
+=== 兔队线段树
 == 平衡树
 === 文艺平衡树
 == 历史版本信息线段树
@@ -154,6 +283,7 @@
 
 = 字符串
 == KMP
+== exKMP
 == SA
 == AC自动机
 == 马拉车
