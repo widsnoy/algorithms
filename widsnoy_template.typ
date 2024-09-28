@@ -29,18 +29,84 @@
 
 = 数论
 == 取模还原分数
+
+== 原根
+- 阶：$"ord"_m (a)$ 是最小的正整数 $n$ 使 $ a^n equiv 1 (mod m)$
+
+- 原根：若 $g$ 满足 $(g,m)=1$ 且 $"ord"_m (g) eq phi(m)$ 则 $g$ 是 $m$ 的原根。若 $m$ 是质数，有 $g^i mod m, 0<i<m$ 的取值各不相同。
+
+原根的应用：$m$ 是质数时，若求$a_k=sum_(i*j mod m eq k)f_i*g_j$ 可以通过原根转化为卷积形式(要求 $0$ 处无取值)。具体而言，$[1,m-1]$ 可以映射到 $g^([1,m-1])$，原式变为 $a_(g^k)=sum_(g^(i+j mod (m-1)) eq g^k)f_(g^i)*g_(g^j)$，令 $f_i eq f_(g^i)$ 则 $a_k=sum_((i+j) mod (m-1) eq k)f_i*g_j$
+
+```cpp
+int q[10005];
+int getG(int n) {
+    int i, j, t = 0;
+    for (i = 2; (ll)(i * i) < n - 1; i++) {
+        if ((n - 1) % i == 0) q[t++] = i, q[t++] = (n - 1) / i;
+    }
+    for (i = 2; ;i++) {
+        for (j = 0; j < t;  j++) if (fpow(i, q[j], n) == 1) break;
+        if (j == t) return i;
+    }
+    return -1;
+}
+
+vector<int> fpow(int kth) {
+    if (kth == 0) return e;
+    auto r = fpow(kth - 1);
+    r = multiply(r, r);
+    for (int i = p - 1; i < r.size(); i++) r[i % (p - 1)] = (r[i % (p - 1)] + r[i]) % mod;
+    r.resize(p - 1);
+    if (kk[kth] == '1') {
+        r = multiply(r, e);
+        for (int i = p - 1; i < r.size(); i++) r[i % (p - 1)] = (r[i % (p - 1)] + r[i]) % mod;
+        r.resize(p - 1);
+    }
+    return r;
+}
+void MAIN() {
+    g = getG(p);
+    int tmp = 1;
+    for (int i = 1; i < p; i++) {
+        tmp = tmp * 1ll * g % p;
+        mp[tmp] = i % (p - 1);
+    }
+    e.resize(p - 1);
+    for (int i = 0; i < p - 1; i++) e[i] = 0;
+    for (int i = 0; i < p; i++) {
+        for (int j = 0; j <= i; j++) {
+            if (binom[i][j] == 0) continue;
+            e[mp[binom[i][j]]]++;
+        }
+    }
+}
+```
 == 解不定方程
+
 == 中国剩余定理
+
 == 卢卡斯定理
+
 == exBSGS
+
 == 二次剩余
+
 == Miller-Rabin
+
 == Pollard-rho
-== 莫比乌斯反演 (两种形式)
-== 除法分块 (上下取整)
-== Min25 筛
-== 区间筛
+
 == 数论卷积
+
+== 莫比乌斯反演 (两种形式)
+
+== 除法分块 (上下取整)
+
+== 杜教筛
+
+== Min25 筛
+
+== 区间筛
+
 
 = 动态规划
 == 缺1背包
@@ -165,7 +231,42 @@ void MAIN() {
 
 == 有向图强连通分量
 === Tarjan
+```cpp
+const int N = 5e5 + 5;
+int n, m, dfc, dfn[N], low[N], stk[N], top, idx[N], in_stk[N], scc_cnt;
+vector<int> G[N];
+
+void tarjan(int u) {
+    low[u] = dfn[u] = ++dfc;
+    stk[++top] = u;
+    in_stk[u] = 1;
+    for (int v : G[u]) {
+        if (!dfn[v]) {
+            tarjan(v);
+            low[u] = min(low[u], low[v]);
+        } else if (in_stk[v]) low[u] = min(dfn[v], low[u]);
+    }
+    if (low[u] == dfn[u]) {
+        int x;
+        scc_cnt++;
+        do {
+            x = stk[top--];
+            idx[x] = scc_cnt;
+            in_stk[x] = 0;
+        } while (x != u);
+    }
+}
+
+void MAIN() {
+    for (int i = 1; i <= n; i++) low[i] = dfn[i] = idx[i] = in_stk[i] = 0;
+    dfc = scc_cnt = top = 0;
+    cin >> n >> m;
+    for (int i = 1; i <= n; i++) if (!dfn[i]) tarjan(i);
+}
+```
 === Kosaraju
+
+== 强连通分量(incremental)
 
 == 连通分量
 === 割点
@@ -240,8 +341,6 @@ void MAIN() {
 == 二项式反演
 == 斯特林数
 == 高维前缀和
-
-= 线性代数
 == 线性基
 == 行列式
 == 高斯消元
