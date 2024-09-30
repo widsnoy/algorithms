@@ -386,10 +386,103 @@ $ceil(n/i)=floor((n+i-1)/i)=floor((n-1)/i)+1$
 
 == 杜教筛
 
-
-
 == Min25 筛
 
+能在 $O(n^(3/4)/log(n))$ 时间求出 $F(n)=sum_(i=1)^(n)f(i)$ 的值，要求积性函数能快速求出 $f(p^k)$ 处的点值。
+
+- 定义 $R(i)$ 表示 $i$ 的最小质因子
+$
+G(n,j)=sum_(i=1)^n f(i)[i in "prime" or R(i) > P_j]
+$
+考虑递推
+$
+G(n,j)=cases(
+    G(n,j-1) "IF" p_j times p_j > n,
+    G(n,j-1)-f(p_j)(G(n/p_j,j-1)-sum_(i=1)^(j-1)f(p_i)) "IF" p_j times p_j <= n
+)
+$
+
+根据整除分块，G 函数的第一维只用 $sqrt(n)$ 种取值，将其存在 $w[]$ 中，且用 $"id1"[]$ 和 $"id2"[]$ 分别存数字对应的下标位置。因为最后只需要知道 $G(x,"pcnt")$ 所以第二维可以滚掉。
+
+- 定义 $S(n,j)=sum_(i=1)^n f(i)[R(i)>=p_j]$  
+
+质数部分答案显然为 $G(n,"pcnt")-sum_(i=1)^(j-1)f(p_i)$, 合数部分考虑提出最小的质因子 $p^k$，得到 $S(n,j)$ 的递推式
+
+$
+S(n,j)=G(n,"pcnt")-sum_(i=1)^(j-1)f(p_i)+sum_(i=j)^"pcnt"sum_(k=1)^(p_i^(k+1)<=n)f(p^k)S(n/p^k,j+1)+f(p^(k+1))
+$
+
+递归边界是 $n=1 or p_j > n$, $S(n,j)=0$  
+
+$sum_(i=1)^(n)f(i)=S(n,1)+f(1)$
+
+```cpp
+#include <cstdio>
+#include <cmath>
+
+typedef long long ll;
+const int N = 4e6 + 5, MOD = 1e9 + 7;
+const ll i6 = 166666668, i2 = 500000004;
+ll n, id1[N], id2[N], su1[N], su2[N], p[N], sqr, w[N], g[N], h[N];
+int cnt, m;
+bool vis[N];
+
+ll add(ll a, ll b) {a %= MOD, b %= MOD; return (a + b >= MOD) ? a + b - MOD : a + b;}
+ll mul(ll a, ll b) {a %= MOD, b %= MOD; return a * b % MOD;}
+ll dec(ll a, ll b) {a %= MOD, b %= MOD; return ((a - b) % MOD + MOD) % MOD;}
+
+void init(int m) {
+	for (ll i = 2; i <= m; i++) {
+		if (!vis[i]) p[++cnt] = i, su1[cnt] = add(su1[cnt - 1], i), su2[cnt] = add(su2[cnt - 1], mul(i, i));
+		for (int j = 1; j <= cnt && i * p[j] <= m; j++) {
+			vis[p[j] * i] = 1;
+			if (i % p[j] == 0) break;
+		}
+	}
+}
+
+ll S(ll x, int y) {
+	if (p[y] > x || x <= 1) return 0;
+	int k = (x <= sqr) ? id1[x] : id2[n / x];
+	ll res = dec(dec(g[k], h[k]), dec(su2[y - 1], su1[y - 1]));
+	for (int i = y; i <= cnt && p[i] * p[i] <= x; i++) {
+		ll pow1 = p[i], pow2 = p[i] * p[i];
+		for (int e = 1; pow2 <= x; pow1 = pow2, pow2 *= p[i], e++) {
+			ll tmp = mul(mul(pow1, dec(pow1, 1)), S(x / pow1, i + 1));
+			tmp = add(tmp, mul(pow2, dec(pow2, 1)));
+			res = add(res, tmp);
+		}
+	}
+	return res;
+}
+
+int main() {
+    scanf("%lld", &n);
+	sqr = sqrt(n + 0.5) + 1;
+	init(sqr);
+	for (ll l = 1, r; l <= n; l = r + 1) {
+        r = n / (n / l);
+		w[++m] = n / l;
+		g[m] = mul(w[m] % MOD, (w[m] + 1) % MOD);
+		g[m] = mul(g[m], (2 * w[m] + 1) % MOD);
+		g[m] = mul(g[m], i6);
+        g[m] = dec(g[m], 1);
+		h[m] = mul(w[m] % MOD, (w[m] + 1) % MOD);;
+	    h[m] = mul(h[m], i2);
+		h[m] = dec(h[m], 1);
+	    (w[m] <= sqr) ? id1[w[m]] = m : id2[r] = m;
+	}
+	for (int j = 1; j <= cnt; j++)
+		for (int i = 1; i <= m && p[j] * p[j] <= w[i]; i++) {
+			int k = (w[i] / p[j] <= sqr) ? id1[w[i] / p[j]] : id2[n / (w[i] / p[j])];
+		    g[i] = dec(g[i], mul(mul(p[j], p[j]), dec(g[k], su2[j - 1])));
+			h[i] = dec(h[i], mul(p[j], dec(h[k], su1[j - 1])));
+		}
+	//printf("%lld\n", g[1] - h[1]);
+	printf("%lld\n", add(S(n, 1), 1));
+	return 0;
+}
+```
 
 = 动态规划
 == 缺1背包
