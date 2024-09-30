@@ -1,11 +1,9 @@
 #set page(
-  paper: "us-letter",
+  paper: "a4",
   header: align(left)[
     _endless rain: widsnoy, WQhuanm, xu826281112_
-  ],
-  flipped: true
+  ]
 )
-#show: rest => columns(2, rest)
 #set heading(
   numbering: "1."
 )
@@ -25,7 +23,7 @@
   title: [_widsnoy's *template*_],
   indent: auto
 )
-#colbreak()
+#pagebreak()
 
 = 数论
 == 取模还原分数
@@ -553,36 +551,436 @@ void MAIN() {
 
 == 强连通分量(incremental)
 
+$"edge"[3]$ 保存了每条边的两个点在同一个强连通分量的时间。调用的时候右端点时间要大一位，因为可能有些边到最后也不能在一个强连通分量中。
+
+```cpp
+int n, m, Q, s[N];
+vector<array<int, 4>> edge;
+vector<int> G[N];
+struct DSU {
+    int fa[N], dep[N], top;
+    pii stk[N];
+    void init(int n) {
+        top = 0;
+        iota(fa, fa + n + 1, 0);
+        fill(dep, dep + n + 1, 1);
+    }
+    int find(int u) {
+        return u == fa[u] ? u : find(fa[u]);
+    }
+    void merge(int u, int v) {
+        u = find(u), v = find(v);
+        if (u == v) return;
+        if (dep[u] > dep[v]) swap(u, v);
+        stk[++top] = {u, (dep[u] == dep[v] ? v : -1)};
+        fa[u] = v;
+        dep[v] += (dep[u] == dep[v]);
+    }
+    void rev(int tim) {
+        while (tim < top) {
+            auto [u, v] = stk[top--];
+            fa[u] = u;
+            if (v != -1) dep[v]--;
+        }
+    }
+} D;
+int stk[N], top, dfc, dfn[N], low[N], in_stk[N];
+void tarjan(int u) {
+    low[u] = dfn[u] = ++dfc;
+    stk[++top] = u;
+    in_stk[u] = 1;
+    for (int v : G[u]) {
+        if (!dfn[v]) {
+            tarjan(v);
+            low[u] = min(low[u], low[v]);
+        } else if (in_stk[v]) low[u] = min(dfn[v], low[u]);
+    }
+    if (low[u] == dfn[u]) {
+        int x;
+        do {
+            x = stk[top--];
+            D.merge(x, u);
+            in_stk[x] = 0;
+        } while (x != u);
+    }
+}
+
+void solve(int l, int r, int a, int b) {
+    if (l == r) {
+        for (int i = a; i <= b; i++) edge[i][3] = l;
+        return;
+    }
+    int mid = (l + r) >> 1;
+    vector<int> node;
+    for (int i = a; i <= b; i++) if (edge[i][0] <= mid) {
+        int u = D.find(edge[i][1]), v = D.find(edge[i][2]);
+        if (u != v) node.push_back(u), node.push_back(v), G[u].push_back(v);
+    }
+    int otp = D.top;
+    for (int x : node) if (!dfn[x]) tarjan(x);
+    vector<array<int, 4>> e1, e2;
+    for (int i = a; i <= b; i++) {
+        int u = D.find(edge[i][1]), v = D.find(edge[i][2]);
+        if (edge[i][0] > mid || u != v) e2.push_back(edge[i]);
+        else e1.push_back(edge[i]);
+    }
+    int s1 = e1.size(), s2 = e2.size();
+    for (int i = a; i < a + s1; i++) edge[i] = e1[i - a];
+    for (int i = a + s1; i <= b; i++) edge[i] = e2[i - a - s1];
+    dfc = 0;
+    for (int x : node) dfn[x] = low[x] = 0, vector<int>().swap(G[x]);
+    vector<int>().swap(node);
+    vector<array<int, 4>>().swap(e1);
+    vector<array<int, 4>>().swap(e2);
+    solve(mid + 1, r, a + s1, b);
+    D.rev(otp);
+    solve(l, mid, a, a + s1 - 1);
+}
+```
 == 连通分量
-=== 割点
-
-=== 桥
-
+=== 割点和桥
+```cpp
+int dfn[N], low[N], dfs_clock;
+bool iscut[N], vis[N];
+void dfs(int u, int fa) {
+    dfn[u] = low[u] = ++dfs_clock;
+    vis[u] = 1;
+    int child = 0;
+    for (int v : e[u]) {
+        if (v == fa) continue;
+        if (!dfn[v]) {
+            dfs(v, u);
+            low[u] = min(low[u], low[v]);
+            child++;
+            if (low[v] >= dfn[u]) iscut[u] = 1;
+        } else if (dfn[u] > dfn[v] && v != fa) low[u] = min(low[u], dfn[v]);
+        if (fa == 0 && child == 1) iscut[u] = 0;
+    }
+}
+```
 === 点双
+```cpp
+#include <cstdio>
+#include <vector>
+using namespace std;
+const int N = 5e5 + 5, M = 2e6 + 5;
+int n, m;
+
+struct edge {
+  int to, nt;
+} e[M << 1];
+
+int hd[N], tot = 1;
+
+void add(int u, int v) { e[++tot] = (edge){v, hd[u]}, hd[u] = tot; }
+
+void uadd(int u, int v) { add(u, v), add(v, u); }
+
+int ans;
+int dfn[N], low[N], bcc_cnt;
+int sta[N], top, cnt;
+bool cut[N];
+vector<int> dcc[N];
+int root;
+
+void tarjan(int u) {
+  dfn[u] = low[u] = ++bcc_cnt, sta[++top] = u;
+  if (u == root && hd[u] == 0) {
+    dcc[++cnt].push_back(u);
+    return;
+  }
+  int f = 0;
+  for (int i = hd[u]; i; i = e[i].nt) {
+    int v = e[i].to;
+    if (!dfn[v]) {
+      tarjan(v);
+      low[u] = min(low[u], low[v]);
+      if (low[v] >= dfn[u]) {
+        if (++f > 1 || u != root) cut[u] = true;
+        cnt++;
+        do dcc[cnt].push_back(sta[top--]);
+        while (sta[top + 1] != v);
+        dcc[cnt].push_back(u);
+      }
+    } else
+      low[u] = min(low[u], dfn[v]);
+  }
+}
+
+int main() {
+  scanf("%d%d", &n, &m);
+  int u, v;
+  for (int i = 1; i <= m; i++) {
+    scanf("%d%d", &u, &v);
+    if (u != v) uadd(u, v);
+  }
+  for (int i = 1; i <= n; i++)
+    if (!dfn[i]) root = i, tarjan(i);
+  printf("%d\n", cnt);
+  for (int i = 1; i <= cnt; i++) {
+    printf("%llu ", dcc[i].size());
+    for (int j = 0; j < dcc[i].size(); j++) printf("%d ", dcc[i][j]);
+    printf("\n");
+  }
+  return 0;
+}
+```
 
 === 边双
+```cpp
+#include <algorithm>
+#include <cstdio>
+#include <vector>
 
+using namespace std;
+const int N = 5e5 + 5, M = 2e6 + 5;
+int n, m, ans;
+int tot = 1, hd[N];
+
+struct edge {
+  int to, nt;
+} e[M << 1];
+
+void add(int u, int v) { e[++tot].to = v, e[tot].nt = hd[u], hd[u] = tot; }
+
+void uadd(int u, int v) { add(u, v), add(v, u); }
+
+bool bz[M << 1];
+int bcc_cnt, dfn[N], low[N], vis_bcc[N];
+vector<vector<int>> bcc;
+
+void tarjan(int x, int in) {
+  dfn[x] = low[x] = ++bcc_cnt;
+  for (int i = hd[x]; i; i = e[i].nt) {
+    int v = e[i].to;
+    if (dfn[v] == 0) {
+      tarjan(v, i);
+      if (dfn[x] < low[v]) bz[i] = bz[i ^ 1] = 1;
+      low[x] = min(low[x], low[v]);
+    } else if (i != (in ^ 1))
+      low[x] = min(low[x], dfn[v]);
+  }
+}
+
+void dfs(int x, int id) {
+  vis_bcc[x] = id, bcc[id - 1].push_back(x);
+  for (int i = hd[x]; i; i = e[i].nt) {
+    int v = e[i].to;
+    if (vis_bcc[v] || bz[i]) continue;
+    dfs(v, id);
+  }
+}
+
+int main() {
+  scanf("%d%d", &n, &m);
+  int u, v;
+  for (int i = 1; i <= m; i++) {
+    scanf("%d%d", &u, &v);
+    if (u == v) continue;
+    uadd(u, v);
+  }
+  for (int i = 1; i <= n; i++)
+    if (dfn[i] == 0) tarjan(i, 0);
+  for (int i = 1; i <= n; i++)
+    if (vis_bcc[i] == 0) {
+      bcc.push_back(vector<int>());
+      dfs(i, ++ans);
+    }
+  printf("%d\n", ans);
+  for (int i = 0; i < ans; i++) {
+    printf("%llu", bcc[i].size());
+    for (int j = 0; j < bcc[i].size(); j++) printf(" %d", bcc[i][j]);
+    printf("\n");
+  }
+  return 0;
+}
+```
 
 == 二分图匹配
+
 === 匈牙利算法
+
+
 === KM
 
 == 网络流
 === 网络最大流
+```cpp
+int head[N], cur[N], ecnt, d[N];
+struct Edge {
+    int nxt, v, flow, cap;
+}e[];
+void add_edge(int u, int v, int flow, int cap) {
+    e[ecnt] = {head[u], v, flow, cap}; head[u] = ecnt++;
+    e[ecnt] = {head[v], u, flow, 0}; head[v] = ecnt++;
+}
+bool bfs() {
+    memset(vis, 0, sizeof vis);
+    std::queue<int> q;
+    q.push(s);
+    vis[s] = 1;
+    d[s] = 0;
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        for (int i = head[u]; i != -1; i = e[i].nxt) {
+            int v = e[i].v;
+            if (vis[v] || e[i].flow >= e[i].cap) continue;
+            d[v] = d[u] + 1;
+            vis[v] = 1;
+            q.push(v);
+        }
+    }
+    return vis[t];
+}
+int dfs(int u, int a) {
+    if (u == t || !a) return a;
+    int flow = 0, f;
+    for (int& i = cur[u]; i != -1; i = e[i].nxt) {
+        int v = e[i].v;
+        if (d[u] + 1 == d[v] && (f = dfs(v, std::min(a, e[i].cap - e[i].flow))) > 0) {
+            e[i].flow += f;
+            e[i ^ 1].flow -= f;
+            flow += f;
+            a -= f;
+            if (!a) break;
+        }
+    }
+    return flow;
+}
 
+```
 === 最小费用最大流
-==== spfa
-==== zkw
-=== 上下界网络流
+```cpp
+const int inf = 1e9;
+int head[N], cur[N], ecnt, dis[N], s, t, n, m, mincost;
+bool vis[N];
+struct Edge {
+    int nxt, v, flow, cap, w;
+}e[100002];
+void add_edge(int u, int v, int flow, int cap, int w) {
+    e[ecnt] = {head[u], v, flow, cap, w}; head[u] = ecnt++;
+    e[ecnt] = {head[v], u, flow, 0, -w}; head[v] = ecnt++;
+}
+bool spfa(int s, int t) {
+    std::fill(vis + s, vis + t + 1, 0);
+    std::fill(dis + s, dis + t + 1, inf);
+    std::queue<int> q;
+    q.push(s);
+    dis[s] = 0;
+    vis[s] = 1;
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+        vis[u] = 0;
+        for (int i = head[u]; i != -1; i = e[i].nxt) {
+            int v = e[i].v;
+            if (e[i].flow < e[i].cap && dis[u] + e[i].w < dis[v]) {
+                dis[v] = dis[u] + e[i].w;
+                if (!vis[v]) vis[v] = 1, q.push(v);
+            }
+        }
+    }
+    return dis[t] != inf;
+}
+int dfs(int u, int a) {
+    if (vis[u]) return 0;
+    if (u == t || !a) return a;
+    vis[u] = 1;
+    int flow = 0, f;
+    for (int& i = cur[u]; i != -1; i = e[i].nxt) {
+        int v = e[i].v;
+        if (dis[u] + e[i].w == dis[v] && (f = dfs(v, std::min(a, e[i].cap - e[i].flow))) > 0) {
+            e[i].flow += f;
+            e[i ^ 1].flow -= f;
+            flow += f;
+            mincost += e[i].w * f;
+            a -= f;
+            if (!a) break;
+        }
+    }
+    vis[u] = 0;
+    return flow;
+}
+```
+=== 上下界网络流（待学）
 
 == 2-SAT
+
+$2 * u$ 代表不选择，$2*u+1$ 代表选择。
 === 搜索 (最小字典序)
+```cpp
+vector<int> G[N * 2];
+bool mark[N * 2];
+int stk[N], top;
+void build_G() {
+    for (int i = 1; i <= n; i++) {
+        int u, v;
+        G[2 * u + 1].push_back(2 * v);
+        G[2 * v + 1].push_back(2 * u);
+    }
+}
+bool dfs(int u) {
+    if (mark[u ^ 1]) return false;
+    if (mark[u]) return true;
+    mark[u] = 1;
+    stk[++top] = u;
+    for (int v : G[u]) {
+        if (!dfs(v)) return false;
+    }
+    return true;
+}
+bool 2_sat() {
+    for (int i = 1; i <= n; i++) {
+        if (!mark[i * 2] && !mark[i * 2 + 1]) {
+            top = 0;
+            if (!dfs(2 * i)) {
+                while (top) mark[stk[top--]] = 0;
+                if (!dfs(2 * i + 1)) return 0;
+            }
+        }
+    }
+    return 1;
+}
+```
 === tarjan
+如果对于一个*x* `sccno`比它的反状态 *x*∧1 的 `sccno` 要小，那么我们用 *x* 这个状态当做答案，否则用它的反状态当做答案。
 
 == 生成树
 === Prime
-=== Kruskal
+```cpp
+int n, m;
+vector<pii> G[N];
+ll dis[N];
+int vis[N];
+void MAIN() {
+    cin >> n >> m;
+    for (int i = 1; i <= m; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        G[u].push_back({v, w});
+        G[v].push_back({u, w});
+    }
+    for (int i = 1; i <= n; i++) dis[i] = 1e18, vis[i] = 0;
+    priority_queue<pair<ll, int>> q;
+    dis[1] = 0;
+    q.push({-dis[1], 1});
+    ll ans = 0;
+    while (!q.empty()) {
+        auto [val, u] = q.top(); q.pop();
+        if (vis[u]) continue;
+        vis[u] = 1;
+        ans -= val;
+        for (auto [v, w] : G[u]) if (dis[v] > w) {
+            dis[v] = w;
+            q.push({-w, v});
+        }
+    }
+    cout << ans << '\n';
+}
+```
 === 次小生成树
+
 === 生成树计数
 
 == 三元环
