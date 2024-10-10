@@ -1091,6 +1091,137 @@ void MAIN() {
     cout << ans << '\n';
 }
 ```
+
+== 圆方树
+记得开两倍空间。
+```cpp
+void tarjan(int u) {
+    stk[++top] = u;
+    low[u] = dfn[u] = ++dfc;
+    for (int v : G[u]) {
+        if (!dfn[v]) {
+            tarjan(v);
+            low[u] = min(low[u], low[v]);
+            if (low[v] == dfn[u]) {
+                cnt++;
+                for (int x = 0; x != v; --top) {
+                    x = stk[top];
+                    T[cnt].push_back(x);
+                    T[x].push_back(cnt);
+                    val[cnt]++;
+                }
+                T[cnt].push_back(u);
+                T[u].push_back(cnt);
+                val[cnt]++;
+            }
+        } else low[u] = min(low[u], dfn[v]);
+    }
+}
+// 调用
+cnt = n;
+for (int i = 1; i <= n; i++) if (!dfn[i]) {
+    tarjan(i);
+    --top;
+}
+```
+- 静态仙人掌最短路。边权设置为到点双顶点的最短距离。
+```cpp
+void tarjan(int u) {
+    stk[++top] = u;
+    dfn[u] = low[u] = ++dfc;
+    for (auto [v, w] : G[u]) if (!dfn[v]) {
+        dis[v] = dis[u] + w;
+        tarjan(v);
+        low[u] = min(low[u], low[v]);
+        if (low[v] == dfn[u]) {
+            ++cnt;
+            val[cnt] = cyc[stk[top]] + dis[stk[top]] - dis[u];
+            for (int x = 0; x != v; --top) {
+                x = stk[top];
+                //assert(val[cnt] >= (dis[x] - dis[u]));
+                int w = min(dis[x] - dis[u], val[cnt] - (dis[x] - dis[u]));
+                T[cnt].push_back({x, w});
+                T[x].push_back({cnt, w});
+            }
+            T[cnt].push_back({u, 0});
+            T[u].push_back({cnt, 0});
+        }
+    } else if (dfn[v] < dfn[u]) {
+        cyc[u] = w;
+        low[u] = min(low[u], dfn[v]);
+    }
+}
+
+void dfs(int u, int fa) {
+    faz[0][u] = fa;
+    for (int k = 1; k < M; k++) faz[k][u] = faz[k - 1][faz[k - 1][u]];
+    for (auto [v, w] : T[u]) if (v != fa) {
+        dep[v] = dep[u] + 1;
+        ff[v] = ff[u] + w;
+        dfs(v, u);
+    }
+}
+int dist(int u, int v) {
+    int tu = u, tv = v;
+    if (dep[u] < dep[v]) swap(u, v);
+    int det = dep[u] - dep[v];
+    for (int k = 0; k < M; k++) if ((det >> k) & 1) u = faz[k][u];
+    int lca;
+    if (u == v) lca = u;
+    else {
+        for (int k = M - 1; k >= 0; k--) if (faz[k][u] != faz[k][v]) {
+            u = faz[k][u]; v = faz[k][v];
+        }
+        lca = faz[0][u];
+    }
+    if (lca <= n) return ff[tu] + ff[tv] - ff[lca] * 2;
+    int tm = min(abs(dis[u] - dis[v]), val[lca] - abs(dis[u] - dis[v]));
+    return ff[tu] - ff[u] + ff[tv] - ff[v] + tm;
+}
+```
+
+- 圆方树上 dp
+
+以单源最短路为例，原点记录该点出发是否返回的最长路，方点记录顶点出发经过环上所能走到的最长路。
+
+```cpp
+void dfs(int u, int fa) {
+    for (int v : T[u]) if (v != fa) dfs(v, u);
+    if (u <= n) {
+        int mx = 0; 
+        /*
+        这里必须设为 0 而不是 -inf, 或者在平凡方点转移的时候要 max(dp[0], dp[1])
+        hack: 4 4
+        1 2
+        2 3
+        3 4
+        4 2
+        */
+        for (int v : T[u]) if (v != fa) {
+            dp[u][1] += dp[v][1];
+            mx = max(mx, dp[v][0] - dp[v][1]);
+            dp[u][0] += dp[v][1];
+        }
+       dp[u][0] += mx;
+    } else {
+        int sum = 1;
+        dp[u][1] = 1;
+        for (int v : T[u]) if (v != fa) {
+            dp[u][1] += dp[v][1] + 1;
+            dp[u][0] = max(dp[u][0], sum + dp[v][0]);
+            sum += dp[v][1] + 1;
+        }
+        sum = 1;
+        reverse(T[u].begin(), T[u].end());
+        for (int v : T[u]) if (v != fa) {
+            dp[u][0] = max(dp[u][0], sum + dp[v][0]);
+            sum += dp[v][1] + 1;
+        }
+        if (val[u] == 2) dp[u][1] = 0;
+    }
+}
+```
+
 === 次小生成树
 
 === 生成树计数
@@ -1152,93 +1283,6 @@ int solve(vector<int>po) {
 }
 ```
 
-== 圆方树
-记得开两倍空间。
-```cpp
-void tarjan(int u) {
-    stk[++top] = u;
-    low[u] = dfn[u] = ++dfc;
-    for (int v : G[u]) {
-        if (!dfn[v]) {
-            tarjan(v);
-            low[u] = min(low[u], low[v]);
-            if (low[v] == dfn[u]) {
-                cnt++;
-                for (int x = 0; x != v; --top) {
-                    x = stk[top];
-                    T[cnt].push_back(x);
-                    T[x].push_back(cnt);
-                    val[cnt]++;
-                }
-                T[cnt].push_back(u);
-                T[u].push_back(cnt);
-                val[cnt]++;
-            }
-        } else low[u] = min(low[u], dfn[v]);
-    }
-}
-// 调用
-cnt = n;
-for (int i = 1; i <= n; i++) if (!dfn[i]) {
-    tarjan(i);
-    --top;
-}
-```
-静态仙人掌最短路。边权设置为到点双顶点的最短距离。
-```cpp
-void tarjan(int u) {
-    stk[++top] = u;
-    dfn[u] = low[u] = ++dfc;
-    for (auto [v, w] : G[u]) if (!dfn[v]) {
-        dis[v] = dis[u] + w;
-        tarjan(v);
-        low[u] = min(low[u], low[v]);
-        if (low[v] == dfn[u]) {
-            ++cnt;
-            val[cnt] = cyc[stk[top]] + dis[stk[top]] - dis[u];
-            for (int x = 0; x != v; --top) {
-                x = stk[top];
-                //assert(val[cnt] >= (dis[x] - dis[u]));
-                int w = min(dis[x] - dis[u], val[cnt] - (dis[x] - dis[u]));
-                T[cnt].push_back({x, w});
-                T[x].push_back({cnt, w});
-            }
-            T[cnt].push_back({u, 0});
-            T[u].push_back({cnt, 0});
-        }
-    } else if (dfn[v] < dfn[u]) {
-        cyc[u] = w;
-        low[u] = min(low[u], dfn[v]);
-    }
-}
-
-void dfs(int u, int fa) {
-    faz[0][u] = fa;
-    for (int k = 1; k < M; k++) faz[k][u] = faz[k - 1][faz[k - 1][u]];
-    for (auto [v, w] : T[u]) if (v != fa) {
-        dep[v] = dep[u] + 1;
-        ff[v] = ff[u] + w;
-        dfs(v, u);
-    }
-}
-int dist(int u, int v) {
-    int tu = u, tv = v;
-    if (dep[u] < dep[v]) swap(u, v);
-    int det = dep[u] - dep[v];
-    for (int k = 0; k < M; k++) if ((det >> k) & 1) u = faz[k][u];
-    int lca;
-    if (u == v) lca = u;
-    else {
-        for (int k = M - 1; k >= 0; k--) if (faz[k][u] != faz[k][v]) {
-            u = faz[k][u]; v = faz[k][v];
-        }
-        lca = faz[0][u];
-    }
-    if (lca <= n) return ff[tu] + ff[tv] - ff[lca] * 2;
-    int tm = min(abs(dis[u] - dis[v]), val[lca] - abs(dis[u] - dis[v]));
-    return ff[tu] - ff[u] + ff[tv] - ff[v] + tm;
-}
-```
 == 最近公共祖先
 
 == 树分治
