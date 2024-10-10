@@ -1,7 +1,7 @@
 #set page(
   paper: "a4",
   header: align(left)[
-    _endless rain: widsnoy, WQhuanm, xu826281112_
+    hdu-t05: widsnoy, WQhuanm, xu826281112
   ]
 )
 #set heading(
@@ -208,6 +208,7 @@ int main() {
         cin >> nm >> na;
         ll x, y;
         ll g = exgcd(m, -nm, x, y), d = (na - a) / g, md = abs(nm / g);
+        if ((na - a) % g) return -1;
         x = mul(x, d, md);
         ll lc = abs(m / g);
         lc *= nm;
@@ -296,36 +297,54 @@ ll lucas(ll n, ll m, ll p) {
 == BSGS
 求解 $a^x equiv n (mod p)$, $a, p$ 不一定互质
 ```cpp
-int BSGS(int a, int b, int p) {
-	unordered_map<int, int> x;
-	int m = sqrt(p + 0.5);
-	int v = ni(fpow(a, m), p);
-	int e = 1; x[1] = 0;
-	for(int i = 1; i < m; i++) {
-        e = e * 1ll * a % p;
-        if(!x[e]) x[e] = i;
-	}
-	for(int i = 0; i <= m; i++) {
-		if(x[b]) return i * m + x[b];
-		b = b * 1ll * v % p;
-	}
-	return -1;
+int fpow(int a, int b, int p) {
+    int res = 1;
+    for (; b; b >>= 1, a = a * 1ll * a % p) if (b & 1) res = res * 1ll * a % p;
+    return res;
 }
-int exBSGS(int a, int n, int p) {
+ll exgcd(ll a, ll b, ll &x, ll &y) {
+    if (b == 0) return x = 1, y = 0, a;
+    ll d = exgcd(b, a % b, y, x);
+    y -= a / b * x;
+    return d;
+}
+int inv(int a, int p) {
+    ll x, y; 
+    ll g = exgcd(a, p, x, y);
+    if (g != 1) return -1;
+    return (x % p + p) % p;
+}
+int BSGS(int a, int b, int p) {
+    if (p == 1) return 1;
+    unordered_map<int, int> x;
+    int m = sqrt(p + 0.5) + 1;
+    int v = inv(fpow(a, m, p), p);
+    int e = 1; 
+    for(int i = 1; i <= m; i++) {
+        e = e * 1ll * a % p;
+        if(!x.count(e)) x[e] = i;
+    }
+    for(int i = 0; i <= m; i++) {
+        if(x.count(b)) return i * m + x[b];
+        b = b * 1ll * v % p;
+    }
+    return -1;
+}
+pii exBSGS(int a, int n, int p) {
     int d, q = 0, sum = 1;
+    if (n == 1) return {0, gcd(a, p) == 1 ? BSGS(a, 1, p) : 0};
     a %= p, n %= p;
-    if(a == 1 || n == 1) return 0;
     while((d = gcd(a, p)) != 1) {
-        if(n % d) return -1; 
+        if(n % d) return {-1, -1}; 
         q++; n /= d; p /= d;
         sum = (sum * 1ll * a / d) % p;
-        if(sum == n) return q;
+        if(sum == n) return {q, gcd(a, p) == 1 ? BSGS(a, 1, p) : 0};
     }
-    int v = ni(sum, p);
+    int v = inv(sum, p);
     n = n * 1ll * v % p;
     int ans = BSGS(a, n, p);
-    if(ans == -1) return -1;
-    return ans + q;
+    if(ans == -1) return {-1, -1};
+    return {ans + q, BSGS(a, 1, p)};
 }
 ```
 == 二次剩余（待补）
@@ -1092,11 +1111,134 @@ void MAIN() {
 = 树论
 == prufer
 
+== 虚树
+
+需要保证 $"LCA"(0, u) = 0$
+
+```cpp
+int solve(vector<int>po) {
+    sort(po.begin(), po.end(), [](int x, int y) {
+        return dfn[x] < dfn[y];
+    });
+    int ans = 0;
+    top = 0;
+    stk[++top] = 0;
+    for (int u : po) {
+        int lca = LCA(u, stk[top]);
+        if (lca == stk[top]) stk[++top] = u;
+        else {
+            for (int i = top; i >= 2 && dep[stk[i - 1]] >= dep[lca]; i--) {
+              //  ans += ff[stk[i]] - ff[stk[i - 1]] - (vis[stk[i]] ? val[stk[i]]: 0); 
+              //  cout << stk[i] << ' ' << stk[i - 1] << ' ' << ff[stk[i]] - ff[stk[i - 1]] - (vis[stk[i]] ? val[stk[i]]: 0) << '\n';
+                add_edge(stk[i], stk[i - 1]);
+                --top;
+            }
+            if (stk[top] != lca) {
+              //  cout << lca << ' ' << stk[top] << ' ' << ff[stk[top]] - ff[lca] - (vis[stk[top]] ? val[stk[top]] : 0) << '\n';
+              //  ans += ff[stk[top]] - ff[lca] - (vis[stk[top]] ? val[stk[top]] : 0);
+                add_edge(stk[top], lca);
+                stk[top] = lca;
+            }
+            stk[++top] = u;
+        }
+    }
+    for (int i = 2; i < top; i++) {
+      //  cout << stk[i + 1] << ' ' << stk[i] << ' ' << ff[stk[i + 1]] - ff[stk[i]] - (vis[stk[i + 1]] ? val[stk[i + 1]] : 0) << '\n';
+       // ans += ff[stk[i + 1]] - ff[stk[i]] - (vis[stk[i + 1]] ? val[stk[i + 1]] : 0);
+        add_edge(stk[i + 1], stk[i]);
+    }
+    //ans += (vis[stk[2]] ? 0 : val[stk[2]]);
+    return ans;
+}
+```
+
 == 圆方树
-=== 广义
+记得开两倍空间。
+```cpp
+void tarjan(int u) {
+    stk[++top] = u;
+    low[u] = dfn[u] = ++dfc;
+    for (int v : G[u]) {
+        if (!dfn[v]) {
+            tarjan(v);
+            low[u] = min(low[u], low[v]);
+            if (low[v] == dfn[u]) {
+                cnt++;
+                for (int x = 0; x != v; --top) {
+                    x = stk[top];
+                    T[cnt].push_back(x);
+                    T[x].push_back(cnt);
+                    val[cnt]++;
+                }
+                T[cnt].push_back(u);
+                T[u].push_back(cnt);
+                val[cnt]++;
+            }
+        } else low[u] = min(low[u], dfn[v]);
+    }
+}
+// 调用
+cnt = n;
+for (int i = 1; i <= n; i++) if (!dfn[i]) {
+    tarjan(i);
+    --top;
+}
+```
+静态仙人掌最短路。边权设置为到点双顶点的最短距离。
+```cpp
+void tarjan(int u) {
+    stk[++top] = u;
+    dfn[u] = low[u] = ++dfc;
+    for (auto [v, w] : G[u]) if (!dfn[v]) {
+        dis[v] = dis[u] + w;
+        tarjan(v);
+        low[u] = min(low[u], low[v]);
+        if (low[v] == dfn[u]) {
+            ++cnt;
+            val[cnt] = cyc[stk[top]] + dis[stk[top]] - dis[u];
+            for (int x = 0; x != v; --top) {
+                x = stk[top];
+                //assert(val[cnt] >= (dis[x] - dis[u]));
+                int w = min(dis[x] - dis[u], val[cnt] - (dis[x] - dis[u]));
+                T[cnt].push_back({x, w});
+                T[x].push_back({cnt, w});
+            }
+            T[cnt].push_back({u, 0});
+            T[u].push_back({cnt, 0});
+        }
+    } else if (dfn[v] < dfn[u]) {
+        cyc[u] = w;
+        low[u] = min(low[u], dfn[v]);
+    }
+}
 
-=== 仙人掌
-
+void dfs(int u, int fa) {
+    faz[0][u] = fa;
+    for (int k = 1; k < M; k++) faz[k][u] = faz[k - 1][faz[k - 1][u]];
+    for (auto [v, w] : T[u]) if (v != fa) {
+        dep[v] = dep[u] + 1;
+        ff[v] = ff[u] + w;
+        dfs(v, u);
+    }
+}
+int dist(int u, int v) {
+    int tu = u, tv = v;
+    if (dep[u] < dep[v]) swap(u, v);
+    int det = dep[u] - dep[v];
+    for (int k = 0; k < M; k++) if ((det >> k) & 1) u = faz[k][u];
+    int lca;
+    if (u == v) lca = u;
+    else {
+        for (int k = M - 1; k >= 0; k--) if (faz[k][u] != faz[k][v]) {
+            u = faz[k][u]; v = faz[k][v];
+        }
+        lca = faz[0][u];
+    }
+    if (lca <= n) return ff[tu] + ff[tv] - ff[lca] * 2;
+    int tm = min(abs(dis[u] - dis[v]), val[lca] - abs(dis[u] - dis[v]));
+    return ff[tu] - ff[u] + ff[tv] - ff[v] + tm;
+}
+```
 == 最近公共祖先
 
 == 树分治
@@ -1123,12 +1265,302 @@ void MAIN() {
 
 
 = 多项式
-== 快速数论变换
+== NTT
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
 
-== 快速傅里叶变换
+typedef vector<int> poly;
+const int mod = 998244353;
+const int N = 4000000 + 5;
 
+int rf[32][N];
+int fpow(int a, int b) {
+    int res = 1;
+    for (; b; b >>= 1, a = a * 1ll * a % mod) if (b & 1)
+        res = res * 1ll * a % mod;
+    return res;
+}
+void init(int n) {
+    assert(n < N);
+    int lg = __lg(n);
+    static vector<bool> bt(32, 0);
+    if (bt[lg] == 1) return;
+    bt[lg] = 1;
+    for (int i = 0; i < n; i++) rf[lg][i] = (rf[lg][i >> 1] >> 1) + ((i & 1) ? (n >> 1) : 0);
+}
+void ntt(poly &x, int lim, int op) {
+    int lg = __lg(lim), gn, g, tmp;;
+    for (int i = 0; i < lim; i++) if (i < rf[lg][i]) swap(x[i], x[rf[lg][i]]);
+    for (int len = 2; len <= lim; len <<= 1) {
+        int k = (len >> 1);
+        gn = fpow(3, (mod - 1) / len);
+        for (int i = 0; i < lim; i += len) {
+            g = 1;
+            for (int j = 0; j < k; j++, g = gn * 1ll * g % mod) {
+                tmp = x[i + j + k] * 1ll * g % mod;
+                x[i + j + k] = (x[i + j] - tmp + mod) % mod;
+                x[i + j] = (x[i + j] + tmp) % mod;
+            }
+        }
+    }
+    if (op == -1) {
+        reverse(x.begin() + 1, x.begin() + lim);
+        int inv = fpow(lim, mod - 2);
+        for (int i = 0; i < lim; i++) x[i] = x[i] * 1ll * inv % mod;
+    }
+}
+poly multiply(const poly &a, const poly &b) {
+    assert(!a.empty() && !b.empty());
+    int lim = 1;
+    while (lim + 1 < int(a.size() + b.size())) lim <<= 1;
+    init(lim);
+    poly pa = a, pb = b;
+    while (pa.size() < lim) pa.push_back(0);
+    while (pb.size() < lim) pb.push_back(0);
+    ntt(pa, lim, 1); ntt(pb, lim, 1);
+    for (int i = 0; i < lim; i++) pa[i] = pa[i] * 1ll * pb[i] % mod;
+    ntt(pa, lim, -1);
+    while (int(pa.size()) + 1 > int(a.size() + b.size())) pa.pop_back();
+    return pa;
+}
+poly prod_poly(const vector<poly>& vec) { // init vector, too slow
+    int n = vec.size();
+    auto calc = [&](const auto &self, int l, int r) -> poly {
+        if (l == r) return vec[l];
+        int mid = (l + r) >> 1;
+        return multiply(self(self, l, mid), self(self, mid + 1, r));
+    };
+    return calc(calc, 0, n - 1);
+}
+
+// Semi-Online-Convolution
+poly semi_online_convolution(const poly& g, int n, int op = 0) {
+    assert(n == g.size());
+    poly f(n, 0);
+    f[0] = 1;
+    auto CDQ = [&](const auto &self, int l, int r) -> void {
+        if (l == r) {
+            // exp
+            if (op == 1 && l > 0) f[l] = f[l] * 1ll * fpow(l, mod - 2) % mod;
+            return;
+        }
+        int mid = (l + r) >> 1;
+        self(self, l, mid);
+        poly a, b;
+        for (int i = l; i <= mid; i++) a.push_back(f[i]);
+        for (int i = 0; i <= r - l - 1; i++) b.push_back(g[i + 1]);
+        a = multiply(a, b);
+        for (int i = mid + 1; i <= r; i++) f[i] = (f[i] + a[i - l - 1]) % mod;
+        self(self, mid + 1, r);
+    };
+    CDQ(CDQ, 0, n - 1);
+    return f;
+}
+
+poly getinv(const poly &a) {
+    assert(!a.empty());
+    poly res = {fpow(a[0], mod - 2)}, na = {a[0]};
+    int lim = 1;
+    while (lim < int(a.size())) lim <<= 1;
+    for (int len = 2; len <= lim; len <<= 1) {
+        while (na.size() < len) {
+            int tmp = na.size();
+            if (tmp < a.size()) na.push_back(a[tmp]);
+            else na.push_back(0);
+        }
+        auto tmp = multiply(na, res);
+        for (auto &x : tmp) x = (x > 0 ? mod - x : x);
+        tmp[0] = ((tmp[0] + 2) >= mod) && (tmp[0] -= mod);
+        tmp = multiply(res, tmp);
+        while (tmp.size() > len) tmp.pop_back();
+        res = tmp;
+    }
+    while (res.size() > a.size()) res.pop_back();
+    return res;
+}
+poly exp(const poly &g) {
+    int n = g.size();
+    poly b(n, 0);
+    for (int i = 1; i < n; i++) b[i] = i * 1ll * g[i] % mod;
+    return semi_online_convolution(b, n, 1);
+}
+poly ln(const poly &A) {
+    int n = A.size();
+    auto C = getinv(A);
+    poly A1(n, 0);
+    for (int i = 0; i < n - 1; i++) A1[i] = (i + 1) * 1ll * A[i + 1] % mod;
+    C = multiply(C, A1);
+    for (int i = n - 1; i > 0; i--) C[i] = C[i - 1] * 1ll * fpow(i, mod - 2) % mod;
+    C[0] = 0;
+    while (C.size() > n) C.pop_back();
+    return C;
+}
+poly quick_pow(poly &a, int k, int k_mod_phi, bool is_k_bigger_than_mod = false) {
+    assert(!a.empty());
+    int n = a.size(), t = -1, b;
+    for (int i = 0; i < n; i++) if (a[i]) {
+        t = i, b = a[i];
+        break;
+    }
+    if (t == -1 || t && is_k_bigger_than_mod || k * 1ll * t >= n) return poly(n, 0);
+    poly f;
+    for (int i = 0; i < n; i++) {
+        if (i + t < n) f.push_back(a[i + t] * 1ll * fpow(b, mod - 2) % mod);
+        else f.push_back(0);
+    }
+    f = ln(f);
+    for (auto &x : f) x = x * 1ll * k % mod;
+    f = exp(f);
+    poly res;
+    for (int i = 0; i < k * t; i++) res.push_back(0);
+    int fb = fpow(b, k_mod_phi);
+    for (int i = k * t; i < n; i++) res.push_back(f[i - k * t] * 1ll * fb % mod);
+    return res;
+}
+
+int main() {
+    ios::sync_with_stdio(0); cin.tie(0);
+    int n, k = 0, k_mod_phi = 0, isb = 0;
+    string s;
+    cin >> n >> s;
+    for (auto ch : s) {
+        if ((ch - '0') + k * 10ll >= mod) isb = 1;
+        k = ((ch - '0') + k * 10ll) % mod;
+        k_mod_phi = ((ch - '0') + k_mod_phi * 10ll) % 998244352;
+    }
+    poly a(n);
+    for (auto &x : a) cin >> x;
+    a = quick_pow(a, k, k_mod_phi, isb);
+    while (a.size() > n) a.pop_back();
+    for (auto x : a) cout << x << ' ';
+    return 0;
+}
+```
 == 任意模数NTT
 
+模数小于 $10^9$
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef complex<double> cp;
+typedef vector<cp> poly;
+typedef long long ll;
+
+const int N = 4000000 + 5;
+const double pi = acos(-1);
+
+int rf[26][N];
+void init(int n) {
+    assert(n < N);
+    int lg = __lg(n);
+    static vector<bool> bt(26, 0);
+    if (bt[lg] == 1) return;
+    bt[lg] = 1;
+    for (int i = 0; i < n; i++) rf[lg][i] = (rf[lg][i >> 1] >> 1) + ((i & 1) ? (n >> 1) : 0);
+}
+void fft(poly &x, int lim, int op) {
+    int lg = __lg(lim);
+    for (int i = 0; i < lim; i++) if (i < rf[lg][i]) swap(x[i], x[rf[lg][i]]);
+    for (int len = 2; len <= lim; len <<= 1) {
+        int k = (len >> 1);
+        for (int i = 0; i < lim; i += len) {
+            for (int j = 0; j < k; j++) {
+                cp w(cos(pi * j / k), op * sin(pi * j / k));
+                cp tmp = w * x[i + j + k];
+                x[i + j + k] = x[i + j] - tmp;
+                x[i + j] = x[i + j] + tmp;
+            }
+        }
+    }
+    if (op == -1) for (int i = 0; i < lim; i++) x[i] /= lim;
+}
+poly multiply(const poly &a, const poly &b) {
+    assert(!a.empty() && !b.empty());
+    int lim = 1;
+    while (lim + 1 < int(a.size() + b.size())) lim <<= 1;
+    init(lim);
+    poly pa = a, pb = b;
+    pa.resize(lim);
+    pb.resize(lim);
+    for (int i = 0; i < lim; i++) pa[i] = (cp){pa[i].real(), pb[i].real()};
+    fft(pa, lim, 1);
+    pb[0] = conj(pa[0]);
+    for (int i = 1; i < lim; i++) pb[lim - i] = conj(pa[i]);
+    for (int i = 0; i < lim; i++) {
+        pa[i] = (pa[i] + pb[i]) * (pa[i] - pb[i]) / cp({0, 4});
+    }
+    fft(pa, lim, -1);
+    pa.resize(int(a.size() + b.size()) - 1);
+    return pa;
+}
+vector<int> MTT(const vector<int> &a, const vector<int> &b, const int mod) {
+    const int B = (1 << 15) - 1, M = (1 << 15);
+    int lim = 1;
+    while (lim + 1 < int(a.size() + b.size())) lim <<= 1;
+    init(lim);
+    poly pa(lim), pb(lim);
+    auto get = [](const vector<int>& v, int pos) -> int {
+        if (pos >= v.size()) return 0;
+        else return v[pos];
+    };
+    for (int i = 0; i < lim; i++) pa[i] = (cp){get(a, i) >> 15, get(a, i) & B};
+    fft(pa, lim, 1);
+    pb[0] = conj(pa[0]);
+    for (int i = 1; i < lim; i++) pb[lim - i] = conj(pa[i]);
+    poly A0(lim), A1(lim);
+    for (int i = 0; i < lim; i++) {
+        A0[i] = (pa[i] + pb[i]) / (cp){2, 0};
+        A1[i] = (pa[i] - pb[i]) / (cp){0, 2}; 
+    }
+    for (int i = 0; i < lim; i++) pa[i] = (cp){get(b, i) >> 15, get(b, i) & B};
+    fft(pa, lim, 1);
+    pb[0] = conj(pa[0]);
+    for (int i = 1; i < lim; i++) pb[lim - i] = conj(pa[i]);
+    poly B0(lim), B1(lim);
+    for (int i = 0; i < lim; i++) {
+        B0[i] = (pa[i] + pb[i]) / (cp){2, 0};
+        B1[i] = (pa[i] - pb[i]) / (cp){0, 2}; 
+    }
+    for (int i = 0; i < lim; i++) {
+        pa[i] = A0[i] * B0[i];
+        pb[i] = A0[i] * B1[i];
+        A0[i] = pa[i];
+        pa[i] = A1[i] * B1[i];
+        B1[i] = pb[i];
+        B0[i] = A1[i] * B0[i];
+        A1[i] = pa[i];
+        pa[i] = A0[i] + (cp){0, 1} * A1[i];
+        pb[i] = B0[i] + (cp){0, 1} * B1[i];
+    }
+    fft(pa, lim, -1); fft(pb, lim, -1);
+    vector<int> res(int(a.size() + b.size()) - 1);
+    const int M2 = M * 1ll * M % mod;
+    for (int i = 0; i < res.size(); i++) {
+        ll a0 = round(pa[i].real()), a1 = round(pa[i].imag()), b0 = round(pb[i].real()), b1 = round(pb[i].imag());
+        a0 %= mod; a1 %= mod; b0 %= mod; b1 %= mod;
+        res[i] = (a0 * 1ll * M2 % mod + a1 + (b0 + b1) % mod * 1ll * M % mod) % mod;
+    }
+    return res;
+}
+
+int main() {
+#ifdef LOCAL
+    freopen("miku.in", "r", stdin);
+    freopen("miku.out", "w", stdout);
+#endif
+    ios::sync_with_stdio(0); cin.tie(0);
+    int n, m, p;
+    cin >> n >> m >> p;
+    vector<int> a(n + 1), b(m + 1);
+    for (auto &x : a) cin >> x;
+    for (auto &x : b) cin >> x;
+    auto res = MTT(a, b, p);
+    for (auto x : res) cout << x << ' ';
+}
+```
 == 自然数幂和
 
 == 快速沃尔什变换
