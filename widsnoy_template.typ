@@ -566,7 +566,9 @@ void MAIN() {
 }
 ```
 
-== SPFA乱搞
+== 差分约束
+
+=== SPFA乱搞
 ```cpp
 mt19937_64 rng(chrono::steady_clock::now().time_since_epoch().count());
 
@@ -620,12 +622,11 @@ void MAIN() {
 }
 ```
 
-== 差分约束
-
 == 竞赛图
 
-== 有向图强连通分量
-=== Tarjan
+
+== 连通分量
+=== 有向图强连通分量
 ```cpp
 const int N = 5e5 + 5;
 int n, m, dfc, dfn[N], low[N], stk[N], top, idx[N], in_stk[N], scc_cnt;
@@ -659,9 +660,7 @@ void MAIN() {
     for (int i = 1; i <= n; i++) if (!dfn[i]) tarjan(i);
 }
 ```
-=== Kosaraju
-
-== 强连通分量(incremental)
+=== 强连通分量(incremental)
 
 $"edge"[3]$ 保存了每条边的两个点在同一个强连通分量的时间。调用的时候右端点时间要大一位，因为可能有些边到最后也不能在一个强连通分量中。
 
@@ -749,7 +748,6 @@ void solve(int l, int r, int a, int b) {
     solve(l, mid, a, a + s1 - 1);
 }
 ```
-== 连通分量
 === 割点和桥
 ```cpp
 int dfn[N], low[N], dfs_clock;
@@ -912,7 +910,6 @@ int main() {
 
 === 匈牙利算法
 
-
 === KM
 
 == 网络流
@@ -962,6 +959,7 @@ int dfs(int u, int a) {
 }
 
 ```
+
 === 最小费用最大流
 ```cpp
 const int inf = 1e9;
@@ -1015,7 +1013,6 @@ int dfs(int u, int a) {
     return flow;
 }
 ```
-=== 上下界网络流（待学）
 
 == 2-SAT
 
@@ -1057,6 +1054,10 @@ bool 2_sat() {
 ```
 === tarjan
 如果对于一个*x* `sccno`比它的反状态 *x*∧1 的 `sccno` 要小，那么我们用 *x* 这个状态当做答案，否则用它的反状态当做答案。
+
+=== 前后缀优化
+
+=== 线段树优化
 
 == 生成树
 === Prime
@@ -1222,23 +1223,149 @@ void dfs(int u, int fa) {
 }
 ```
 
-=== 次小生成树
+== 欧拉回路
+- 有向图
+```cpp
+void dfs(int u) {
+    for (int &i = hd[u]; i < G[u].size(); ) dfs(G[u][i++]);
+    stk.push_back(u);
+}
+int check() {
+    int mo = 0, le = 0, st = 1;
+    for (int i = 1; i <= n; i++) {
+        if (abs(in[i] - out[i]) > 1) return -1;
+        if (in[i] > out[i]) le++;
+        if (in[i] < out[i]) mo++, st = i;
+    }
+    if (mo > 1 || le > 1 || mo + le == 1) return -1;
+    return st;
+}
 
-=== 生成树计数
+void MAIN() {
+    cin >> n >> m;
+    for (int i = 1; i <= m; i++) {
+        int u, v;
+        cin >> u >> v;
+        in[v]++; out[u]++;
+        G[u].push_back(v);
+    }
+    for (int i = 1; i <= n; i++) sort(G[i].begin(), G[i].end());
+    int tmp = check();
+    if (tmp == -1) cout << "No\n";
+    else {
+        dfs(tmp);
+        copy(stk.rbegin(), stk.rend(), ostream_iterator<int>(cout, " "));
+        cout << '\n';
+    }
+}
+```
 
-== 三元环
+- 无向图
+```cpp
+void dfs(int u) {
+    for (int &i = hd[u]; i < G[u].size(); ) {
+        while (i < G[u].size() && cnt[u][G[u][i]] == 0) ++i;
+        if (i == G[u].size()) break;
+        cnt[u][G[u][i]]--;
+        cnt[G[u][i]][u]--;
+        dfs(G[u][i++]);
+    }
+    stk.push_back(u);
+}
+int check() {
+    int odd = 0, st = -1;
+    for (int i = 1; i <= n; i++) {
+        if (deg[i] == 0) continue;
+        if (st == -1) st = i;
+        if (deg[i] & 1) {
+            ++odd;
+            if (odd == 1) st = i;
+        }
+    }
+    if (odd > 2) return -1;
+    return st;
+}
 
-== 四元环
-
-== 欧拉路
-
+void MAIN() {
+    n = 500;
+    cin >> m;
+    for (int i = 1; i <= m; i++) {
+        int u, v;
+        cin >> u >> v;
+        ++deg[u]; ++deg[v];
+        G[u].push_back(v);
+        G[v].push_back(u);
+        ++cnt[u][v];
+        ++cnt[v][u];
+    }
+    for (int i = 1; i <= n; i++) sort(G[i].begin(), G[i].end());
+    int tmp = check();
+    if (tmp == -1) cout << "No\n";
+    else {
+        dfs(tmp);
+        copy(stk.rbegin(), stk.rend(), ostream_iterator<int>(cout, "\n"));
+    }
+}
+```
 == 曼哈顿路
+== 三/四元环计数
+- 三元环
+```cpp
+int vis[N];
+vector<int> G[N];
+ll main() {
+    ll cnt = 0;
+    for (int i = 0; i < m; i++) {
+        if (deg[ed[i].fi] == deg[ed[i].se] && ed[i].fi > ed[i].se) swap(ed[i].fi, ed[i].se);
+        if (deg[ed[i].fi] > deg[ed[i].se]) swap(ed[i].fi, ed[i].se);
+        G[ed[i].fi].push_back(ed[i].se);
+    }
+    for (int u = 1; u <= n; u++) {
+        for (int v : G[u]) vis[v] = 1;
+        for (int v : G[u]) for (int w : G[v]) if (vis[w]) ++cnt;
+        for (int v : G[u]) vis[v] = 0;
+    }
+    return cnt;
+}
+```
 
-== 建图优化
-=== 前后缀优化
+- 四元环
 
-=== 线段树优化
+统计 $c?b->a<-d?c$ 的数目，因为最大度数点 $a$ 不同，所以不会算重。
 
+```cpp
+int n, m, deg[N], cnt[N];
+bool bigger(int a, int b) {
+    return deg[a] > deg[b] || (deg[a] == deg[b] && a > b);
+}
+void MAIN() {
+    cin >> n >> m;
+    for (int i = 1; i <= m; i++) {
+        int u, v;
+        cin >> u >> v;
+        ed.push_back({u, v});
+        G[u].push_back(v);
+        G[v].push_back(u);
+        ++deg[u]; ++deg[v];
+    }
+    for (auto [u, v] : ed) {
+        if (bigger(v, u)) swap(u, v);
+        T[u].push_back(v);
+    }
+    ll ans = 0;
+    for (int a = 1; a <= n; a++) {
+        for (int b : T[a]) {
+            for (int c : G[b]) {
+                if (c == a || bigger(c, a)) continue;
+                ans += cnt[c];
+                ++cnt[c];
+            }
+        }
+        for (int b : T[a]) for (int c : G[b]) cnt[c] = 0;
+    }
+    cout << ans << '\n';
+}
+```
 = 树论
 == prufer
 
