@@ -7,7 +7,10 @@
 #set heading(
   numbering: "1."
 )
-#set text(12pt)
+#set text(
+    size: 12pt,
+    font: ("Linux libertine", "Noto Sans CJK SC"), lang: "zh", region: "cn")
+#set page(numbering: "(i)")
 #let style-number(number) = text(gray)[#number]
 #show raw.where(block: true): it => block(
   fill: luma(240),
@@ -24,7 +27,8 @@
   indent: auto
 )
 #pagebreak()
-
+#set page(numbering: "1")
+#counter(page).update(1)
 = 数论
 == 取模还原分数
 
@@ -347,11 +351,6 @@ pii exBSGS(int a, int n, int p) {
     return {ans + q, BSGS(a, 1, p)};
 }
 ```
-== 二次剩余（待补）
-
-== Miller-Rabin（待补）
-
-== Pollard-rho（待补）
 
 == 数论函数
 + $phi(n)=n product (1-1/p)$
@@ -505,7 +504,13 @@ int main() {
 
 = 动态规划
 == 缺1背包
+背包和放物品先后顺序无关，所以可以直接倒退删物品。
 
+```cpp
+memcpy(g, f, sizeof f);
+for(int j = w[i]; j <= m; ++j)
+    g[j] -= g[j - w[i]];
+```
 = 图论
 == 找环
 ```cpp
@@ -1308,7 +1313,8 @@ void MAIN() {
 }
 ```
 == 曼哈顿路
-== 三/四元环计数
+
+== 无向图三/四元环计数
 - 三元环
 ```cpp
 int vis[N];
@@ -1761,22 +1767,453 @@ int main() {
 
 = 字符串
 == KMP
-== exKMP
+```cpp
+int n = strlen(s + 1);
+for (int i = 2; i <= n; i++) {
+    int j = k[i - 1];
+    while (j != 0 && s[i] != s[j + 1]) j = k[j];
+    if (s[i] == s[j + 1]) k[i] = j + 1;
+    else k[i] = 0;
+}
+```
+== Z function
+```cpp
+ for (int i = 2, l = 0, r = 0; i <= n; i++) {
+     if (r >= i && r - i + 1 > z[i - l + 1]) {
+     	z[i] = z[i - l + 1];
+     } else {
+     	z[i] = max(0, r - i + 1);
+     	while (z[i] < n - i + 1 && s[z[i] + 1] == s[i + z[i]]) ++z[i];
+     }
+     if (i + z[i] - 1 > r) l = i, r = i + z[i] - 1;
+ }
+```
 == SA
+```cpp
+int sa[N], ork[N], rk[N], cnt[N], id[N], h[N], M, n;
+char s[N];
+int mn[22][N];
+int lcp(int a, int b) {
+    if (a == b) return n - a + 1;
+    if (rk[a] > rk[b]) swap(a, b);
+    int l = rk[a] + 1, r = rk[b];
+    int len = r - l + 1, k = __lg(len);
+    return min(mn[k][l], mn[k][r - (1 << k) + 1]);
+}
+void MAIN() {
+    scanf("%s", s + 1);
+    n = strlen(s + 1);
+    for (int i = 1; i <= n; i++) M = max(M, (int)s[i]);
+    for (int i = 1; i <= n; i++) if ((int)(s[i]) > M) M = (int)(s[i]);
+    for (int i = 1; i <= n; i++) cnt[rk[i] = s[i]]++;
+    for (int i = 0; i <= M; i++) cnt[i] += cnt[i - 1];
+    for (int i = n; i; i--) sa[cnt[rk[i]]--] = i;
+    for (int w = 1, p; w < n; w <<= 1, M = p) {
+        p = 0;
+        for (int i = n; i > n - w; i--) id[++p] = i;
+        for (int i = 1; i <= n; i++) if (sa[i] > w) id[++p] = sa[i] - w;
+        for (int i = 0; i <= M; i++) cnt[i] = 0;
+        for (int i = 1; i <= n; i++) cnt[rk[i]]++;
+        for (int i = 1; i <= M; i++) cnt[i] += cnt[i - 1];
+        for (int i = n; i; i--) sa[cnt[rk[id[i]]]--] = id[i];
+        p = 0;
+        for (int i = 0; i <= n; i++) ork[i] = rk[i];
+        for (int i = 1; i <= n; i++) {
+            if (ork[sa[i]] == ork[sa[i - 1]] && ork[sa[i] + w] == ork[sa[i - 1] + w]) rk[sa[i]] = p;
+            else rk[sa[i]] = ++p;
+        }
+        if (p == n) break;
+    }
+    for (int i = 1, k = 0; i <= n; i++) {
+        if (rk[i] == 1) continue;
+        if (k) k--;
+        while (s[i + k] == s[sa[rk[i] - 1] + k]) k++;
+        h[rk[i]] = k;
+    }
+    for (int i = 1; i <= n; i++) mn[0][i] = h[i];
+    for (int j = 1; j < 22; j++) {
+        for (int i = 1; i <= n; i++) {
+            mn[j][i] = min(mn[j - 1][i], mn[j - 1][min(n, i + (1 << (j - 1)))]);
+        }
+    }
+}
+```
 == AC自动机
-== 马拉车
+```cpp
+namespace AC {
+	int ch[N][26], tot, fail[N], e[N];
+	void insert(const char *s) {
+		int u = 0, n = strlen(s + 1);
+		for (int i = 1; i <= n; i++) {
+            if (!ch[u][s[i] - 'a']) ch[u][s[i] - 'a'] = ++tot;
+            u = ch[u][s[i] - 'a'];
+		}
+		e[u] += 1;
+	}
+	void build() {
+		queue<int> q;
+		for (int i = 0; i <= 25; i++) if (ch[0][i]) q.push(ch[0][i]);
+		while (!q.empty()) {
+			int now = q.front(); q.pop();
+			for (int i = 0; i < 26; i++) {
+				if (ch[now][i]) fail[ch[now][i]] = ch[fail[now]][i], q.push(ch[now][i]);
+				else ch[now][i] = ch[fail[now]][i];
+			}
+		}
+	}
+	int query(const char *s) {
+        int u = 0, n = strlen(s + 1), res = 0;
+        for (int i = 1; i <= n; i++){
+        	u = ch[u][s[i] - 'a'];
+        	for (int j = u; j && e[j] != -1; j = fail[j]) {
+        		res += e[j];
+        		e[j] = -1;
+        	}
+        }
+        return res;
+	}
+}
+```
+== Manacher
+
+对于第 $i$ 个字符为对称轴: 
+
++ 如果回文串长为奇数, $d[2 * i]/2$ 是半径加上自己的长度
+
++ 如果长为偶数, $d[2 * i -1]/2$ 是半径的长度, 方向向右. 
+
+```cpp
+int n, d[N * 2];
+char s[N];
+
+for (int i = 1; i <= n; i++) t[i * 2] = s[i], t[i * 2 - 1] = '#';
+t[n * 2 + 1] = '#';
+m = n * 2 + 1;
+for (int i = 1, l = 0, r = 0; i <= m; i++) {
+  	int k = i <= r ? min(d[r - i + l], r - i + 1) : 1;
+   	while (i + k <= m && i - k >= 1 && t[i + k] == t[i - k]) k++;
+   	d[i] = k--;
+   	if (i + k > r) r = i + k, l = i - k;
+}
+```
 
 = 杂项
-== gcd, xor, or 分块
-== 超级钢琴
-== 平方计数
-== FFT 字符串匹配
-== 循环矩阵乘法
-== 线性逆元
-== 底数固定快速幂
 == fastio
+
+来自 oiwiki
+
+```cpp
+// #define DEBUG 1  // 调试开关
+struct IO {
+#define MAXSIZE (1 << 20)
+#define isdigit(x) (x >= '0' && x <= '9')
+  char buf[MAXSIZE], *p1, *p2;
+  char pbuf[MAXSIZE], *pp;
+#if DEBUG
+#else
+  IO() : p1(buf), p2(buf), pp(pbuf) {}
+
+  ~IO() { fwrite(pbuf, 1, pp - pbuf, stdout); }
+#endif
+  char gc() {
+#if DEBUG  // 调试，可显示字符
+    return getchar();
+#endif
+    if (p1 == p2) p2 = (p1 = buf) + fread(buf, 1, MAXSIZE, stdin);
+    return p1 == p2 ? ' ' : *p1++;
+  }
+
+  bool blank(char ch) {
+    return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
+  }
+
+  template <class T>
+  void read(T &x) {
+    double tmp = 1;
+    bool sign = false;
+    x = 0;
+    char ch = gc();
+    for (; !isdigit(ch); ch = gc())
+      if (ch == '-') sign = 1;
+    for (; isdigit(ch); ch = gc()) x = x * 10 + (ch - '0');
+    if (ch == '.')
+      for (ch = gc(); isdigit(ch); ch = gc())
+        tmp /= 10.0, x += tmp * (ch - '0');
+    if (sign) x = -x;
+  }
+
+  void read(char *s) {
+    char ch = gc();
+    for (; blank(ch); ch = gc());
+    for (; !blank(ch); ch = gc()) *s++ = ch;
+    *s = 0;
+  }
+
+  void read(char &c) { for (c = gc(); blank(c); c = gc()); }
+
+  void push(const char &c) {
+#if DEBUG  // 调试，可显示字符
+    putchar(c);
+#else
+    if (pp - pbuf == MAXSIZE) fwrite(pbuf, 1, MAXSIZE, stdout), pp = pbuf;
+    *pp++ = c;
+#endif
+  }
+
+  template <class T>
+  void write(T x) {
+    if (x < 0) x = -x, push('-');  // 负数输出
+    static T sta[35];
+    T top = 0;
+    do {
+      sta[top++] = x % 10, x /= 10;
+    } while (x);
+    while (top) push(sta[--top] + '0');
+  }
+
+  template <class T>
+  void write(T x, char lastChar) {
+    write(x), push(lastChar);
+  }
+} io;
+
+```
 == 高精度
 
-= 配置相关
+来自 oiwiki
+
+```cpp
+constexpr int MAXN = 9999;
+// MAXN 是一位中最大的数字
+constexpr int MAXSIZE = 10024;
+// MAXSIZE 是位数
+constexpr int DLEN = 4;
+
+// DLEN 记录压几位
+struct Big {
+  int a[MAXSIZE], len;
+  bool flag;  // 标记符号'-'
+
+  Big() {
+    len = 1;
+    memset(a, 0, sizeof a);
+    flag = false;
+  }
+
+  Big(const int);
+  Big(const char*);
+  Big(const Big&);
+  Big& operator=(const Big&);
+  Big operator+(const Big&) const;
+  Big operator-(const Big&) const;
+  Big operator*(const Big&) const;
+  Big operator/(const int&) const;
+  // TODO: Big / Big;
+  Big operator^(const int&) const;
+  // TODO: Big ^ Big;
+
+  // TODO: Big 位运算;
+
+  int operator%(const int&) const;
+  // TODO: Big ^ Big;
+  bool operator<(const Big&) const;
+  bool operator<(const int& t) const;
+  void print() const;
+};
+
+Big::Big(const int b) {
+  int c, d = b;
+  len = 0;
+  // memset(a,0,sizeof a);
+  CLR(a);
+  while (d > MAXN) {
+    c = d - (d / (MAXN + 1) * (MAXN + 1));
+    d = d / (MAXN + 1);
+    a[len++] = c;
+  }
+  a[len++] = d;
+}
+
+Big::Big(const char* s) {
+  int t, k, index, l;
+  CLR(a);
+  l = strlen(s);
+  len = l / DLEN;
+  if (l % DLEN) ++len;
+  index = 0;
+  for (int i = l - 1; i >= 0; i -= DLEN) {
+    t = 0;
+    k = i - DLEN + 1;
+    if (k < 0) k = 0;
+    g(j, k, i) t = t * 10 + s[j] - '0';
+    a[index++] = t;
+  }
+}
+
+Big::Big(const Big& T) : len(T.len) {
+  CLR(a);
+  f(i, 0, len) a[i] = T.a[i];
+  // TODO:重载此处？
+}
+
+Big& Big::operator=(const Big& T) {
+  CLR(a);
+  len = T.len;
+  f(i, 0, len) a[i] = T.a[i];
+  return *this;
+}
+
+Big Big::operator+(const Big& T) const {
+  Big t(*this);
+  int big = len;
+  if (T.len > len) big = T.len;
+  f(i, 0, big) {
+    t.a[i] += T.a[i];
+    if (t.a[i] > MAXN) {
+      ++t.a[i + 1];
+      t.a[i] -= MAXN + 1;
+    }
+  }
+  if (t.a[big])
+    t.len = big + 1;
+  else
+    t.len = big;
+  return t;
+}
+
+Big Big::operator-(const Big& T) const {
+  int big;
+  bool ctf;
+  Big t1, t2;
+  if (*this < T) {
+    t1 = T;
+    t2 = *this;
+    ctf = true;
+  } else {
+    t1 = *this;
+    t2 = T;
+    ctf = false;
+  }
+  big = t1.len;
+  int j = 0;
+  f(i, 0, big) {
+    if (t1.a[i] < t2.a[i]) {
+      j = i + 1;
+      while (t1.a[j] == 0) ++j;
+      --t1.a[j--];
+      // WTF?
+      while (j > i) t1.a[j--] += MAXN;
+      t1.a[i] += MAXN + 1 - t2.a[i];
+    } else
+      t1.a[i] -= t2.a[i];
+  }
+  t1.len = big;
+  while (t1.len > 1 && t1.a[t1.len - 1] == 0) {
+    --t1.len;
+    --big;
+  }
+  if (ctf) t1.a[big - 1] = -t1.a[big - 1];
+  return t1;
+}
+
+Big Big::operator*(const Big& T) const {
+  Big res;
+  int up;
+  int te, tee;
+  f(i, 0, len) {
+    up = 0;
+    f(j, 0, T.len) {
+      te = a[i] * T.a[j] + res.a[i + j] + up;
+      if (te > MAXN) {
+        tee = te - te / (MAXN + 1) * (MAXN + 1);
+        up = te / (MAXN + 1);
+        res.a[i + j] = tee;
+      } else {
+        up = 0;
+        res.a[i + j] = te;
+      }
+    }
+    if (up) res.a[i + T.len] = up;
+  }
+  res.len = len + T.len;
+  while (res.len > 1 && res.a[res.len - 1] == 0) --res.len;
+  return res;
+}
+
+Big Big::operator/(const int& b) const {
+  Big res;
+  int down = 0;
+  gd(i, len - 1, 0) {
+    res.a[i] = (a[i] + down * (MAXN + 1)) / b;
+    down = a[i] + down * (MAXN + 1) - res.a[i] * b;
+  }
+  res.len = len;
+  while (res.len > 1 && res.a[res.len - 1] == 0) --res.len;
+  return res;
+}
+
+int Big::operator%(const int& b) const {
+  int d = 0;
+  gd(i, len - 1, 0) d = (d * (MAXN + 1) % b + a[i]) % b;
+  return d;
+}
+
+Big Big::operator^(const int& n) const {
+  Big t(n), res(1);
+  int y = n;
+  while (y) {
+    if (y & 1) res = res * t;
+    t = t * t;
+    y >>= 1;
+  }
+  return res;
+}
+
+bool Big::operator<(const Big& T) const {
+  int ln;
+  if (len < T.len) return true;
+  if (len == T.len) {
+    ln = len - 1;
+    while (ln >= 0 && a[ln] == T.a[ln]) --ln;
+    if (ln >= 0 && a[ln] < T.a[ln]) return true;
+    return false;
+  }
+  return false;
+}
+
+bool Big::operator<(const int& t) const {
+  Big tee(t);
+  return *this < tee;
+}
+
+void Big::print() const {
+  printf("%d", a[len - 1]);
+  gd(i, len - 2, 0) { printf("%04d", a[i]); }
+}
+
+void print(const Big& s) {
+  int len = s.len;
+  printf("%d", s.a[len - 1]);
+  gd(i, len - 2, 0) { printf("%04d", s.a[i]); }
+}
+```
 == 对拍
-== vscode 配置
+```bash
+#!/usr/bin/bash
+g++ ./my.cpp -o my -std=c++17 -fsanitize=undefined
+g++ ./std.cpp -o std -std=c++17 -fsanitize=undefined
+g++ ./data.cpp -o data -std=c++17 -fsanitize=undefined
+cnt=0;
+while true; do
+	./data > data.in
+	./my < data.in > my.out
+	./std < data.in > std.out
+	if diff my.out std.out; then
+		let cnt++;
+		echo "# $cnt AC";
+	else
+		echo "WA";
+		break;
+	fi
+done
+```
