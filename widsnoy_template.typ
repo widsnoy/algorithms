@@ -1439,7 +1439,32 @@ int solve(vector<int>po) {
 == 线性基
 == 行列式
 == 高斯消元
-
+```cpp
+namespace Gauss {
+    bitset<258> a[256 + 256 + 5];
+    int n;
+    void push(const bitset<258>& x) {
+        a[++n] = x;
+    }
+    bool solve(int m) {
+        int k = 1;
+        for (int i = 1; i <= m; i++) {
+            if (k > n) break;
+            for (int j = k + 1; j <= n; j++) if (a[j][i] > 0) {
+                swap(a[k], a[j]);
+                break;
+            }
+            if (a[k][i] == 0) break;
+            for (int j = 1; j <= n; j++) if (j != k && a[j][i]) {
+                a[j] ^= a[k];
+            }
+            ++k;
+        }
+        for (int i = k; i <= n; i++) if (a[i][m + 1]) return false;
+        return true;
+    }
+}
+```
 
 = 多项式
 == NTT
@@ -1840,38 +1865,36 @@ void MAIN() {
 ```
 == AC自动机
 ```cpp
-namespace AC {
-	int ch[N][26], tot, fail[N], e[N];
-	void insert(const char *s) {
-		int u = 0, n = strlen(s + 1);
-		for (int i = 1; i <= n; i++) {
-            if (!ch[u][s[i] - 'a']) ch[u][s[i] - 'a'] = ++tot;
-            u = ch[u][s[i] - 'a'];
-		}
-		e[u] += 1;
+int ch[N][26], tot, fail[N], e[N];
+void insert(const char *s) {
+	int u = 0, n = strlen(s + 1);
+	for (int i = 1; i <= n; i++) {
+        if (!ch[u][s[i] - 'a']) ch[u][s[i] - 'a'] = ++tot;
+        u = ch[u][s[i] - 'a'];
 	}
-	void build() {
-		queue<int> q;
-		for (int i = 0; i <= 25; i++) if (ch[0][i]) q.push(ch[0][i]);
-		while (!q.empty()) {
-			int now = q.front(); q.pop();
-			for (int i = 0; i < 26; i++) {
-				if (ch[now][i]) fail[ch[now][i]] = ch[fail[now]][i], q.push(ch[now][i]);
-				else ch[now][i] = ch[fail[now]][i];
-			}
+	e[u] += 1;
+}
+void build() {
+	queue<int> q;
+	for (int i = 0; i <= 25; i++) if (ch[0][i]) q.push(ch[0][i]);
+	while (!q.empty()) {
+		int now = q.front(); q.pop();
+		for (int i = 0; i < 26; i++) {
+			if (ch[now][i]) fail[ch[now][i]] = ch[fail[now]][i], q.push(ch[now][i]);
+			else ch[now][i] = ch[fail[now]][i];
 		}
 	}
-	int query(const char *s) {
-        int u = 0, n = strlen(s + 1), res = 0;
-        for (int i = 1; i <= n; i++){
-        	u = ch[u][s[i] - 'a'];
-        	for (int j = u; j && e[j] != -1; j = fail[j]) {
-        		res += e[j];
-        		e[j] = -1;
-        	}
-        }
-        return res;
-	}
+}
+int query(const char *s) {
+    int u = 0, n = strlen(s + 1), res = 0;
+    for (int i = 1; i <= n; i++){
+    	u = ch[u][s[i] - 'a'];
+    	for (int j = u; j && e[j] != -1; j = fail[j]) {
+    		res += e[j];
+    		e[j] = -1;
+    	}
+    }
+    return res;
 }
 ```
 == Manacher
@@ -2197,6 +2220,78 @@ void print(const Big& s) {
   gd(i, len - 2, 0) { printf("%04d", s.a[i]); }
 }
 ```
+
+== 手写 bitset
+```cpp
+struct Bitset {
+    #define For(i,a,b) for(int i=a,i##end=b; i<=i##end; i++)
+    #define foR(i,a,b) for(int i=a,i##end=b; i>=i##end; i--)
+    using uint = unsigned int;
+    using ull = unsigned long long;
+    vector < ull > bit; int len;
+    Bitset(int x = n) {x = (x >> 6) + 1; bit.resize(x); len = x;}
+    void resize(int x) {bit.resize((x >> 6) + 1); len = (x >> 6) + 1;For(i, 0, len-1) bit[i] = 0;}
+    void set1(int x) {bit[x>>6] |= (1ull<<(x&63));}
+    void set0(int x) {bit[x>>6] &= (~(1ull<<(x&63)));}
+    void flip(int x) {bit[x>>6] ^= (1ull<<(x&63));}
+    bool operator [] (int x) {return (bit[x>>6] >> (x&63)) & 1;}
+    bool any() {For(i, 0, len-1) if(bit[i]) return 1;return 0;}
+    Bitset operator ~ () const {Bitset res(len);For(i, 0, len-1) res.bit[i] = ~bit[i];return res;}
+    Bitset operator | (const Bitset &b) const {Bitset res(len); For(i, 0, len-1) res.bit[i] = bit[i] | b.bit[i];return res;}
+    Bitset operator & (const Bitset &b) const {Bitset res(len); For(i, 0, len-1) res.bit[i] = bit[i] & b.bit[i];return res;}
+    Bitset operator ^ (const Bitset &b) const {Bitset res(len); For(i, 0, len-1) res.bit[i] = bit[i] ^ b.bit[i];return res;}
+    void operator &= (const Bitset &b) {For(i, 0, len-1) bit[i] &= b.bit[i];}
+    void operator |= (const Bitset &b) {For(i, 0, len-1) bit[i] |= b.bit[i];}
+    void operator ^= (const Bitset &b) {For(i, 0, len-1) bit[i] ^= b.bit[i];}
+    Bitset operator << (const int t) const {
+        Bitset res(len); int high = t >> 6, low = t & 63; ull lst = 0;
+        for(int i = 0; i + high < len; i++) {
+            res.bit[i + high] = (lst | (bit[i] << low));
+            if(low) lst = (bit[i] >> (64 - low));
+        }
+        return res;
+    }
+    Bitset operator >> (const int t) const {
+        Bitset res(len); int high = t >> 6, low = t & 63; ull lst = 0;
+        for(int i = len - 1; i >= high; i--) {
+            res.bit[i - high] = (lst | (bit[i] >> low));
+            if(low) lst = (bit[i] << (64 - low));
+        }
+        return res;
+    }
+    void operator <<= (const int t) {
+        int high = t >> 6, low = t & 63;
+        for(int i = len - high - 1; ~i; i--) {
+            bit[i + high] = (bit[i] << low);
+            if(low && i) bit[i + high] |= (bit[i - 1] >> (64 - low));
+        }
+        for(int i = 0; i < min(high, len - 1); i++) bit[i] = 0;
+    } 
+    void operator >>= (const int t) {
+        int high = t >> 6, low = t & 63;
+        for(int i = high; i < len; i++) {
+            bit[i - high] = (bit[i] >> low);
+            if(low && i != len) bit[i - high] |= (bit[i + 1] << (64 - low));
+        }
+        for(int i = max(len - high, 0); i < len; i++) bit[i] = 0;
+    } 
+    ull get(int x) {
+        int t = x >> 6, q = x & 63;
+        if (q == 63) return bit[t];
+        return bit[t] & ((1ull << (q + 1)) - 1);
+    }
+    ull get(int l, int r) {
+        int lt = (l >> 6), rt = (r >> 6);
+        if (lt == rt) {
+            if ((l & 63) == 0) return get(r);
+            return (get(r) - get(l - 1)) >> ((l & 63));
+        }
+         ull a = (l & 63) == 0 ? (bit[lt]) : ((bit[lt] - get(l - 1)) >> ((l & 63)));
+         return a + (get(r) << (64 - (l & 63)));
+     }
+}
+```
+
 == 对拍
 ```bash
 #!/usr/bin/bash
