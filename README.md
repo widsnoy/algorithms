@@ -1,5 +1,4 @@
-# todo list
-- [x] 欧拉路
-- [] 数据结构 
-- [] 组合数学
-- [] DP 优化
+## todo list
+-[] prufer
+-[] sosdp
+-[] fwt
