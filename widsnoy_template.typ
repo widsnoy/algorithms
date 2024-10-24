@@ -1,7 +1,7 @@
 #set page(
   paper: "a4",
   header: align(left)[
-    hdu-t05: widsnoy, WQhuanm, xu826281112
+    _hdu-t05: widsnoy, WQhuanm, xu826281112_
   ]
 )
 #set heading(
@@ -1491,7 +1491,31 @@ int main() {
 ```
 
 = 数学
-== 高维前缀和
+== 子集卷积
+高维前缀和
+```cpp
+for (int k = 0; k < 20; k++) {
+    for (int i = 0; i < (1 << 20); i++) if ((i >> k) & 1) {
+        f[i] = f[i] + f[i ^ (1 << k)];
+    }
+}
+```
+高维后缀和
+```cpp
+for (int k = 0; k < 20; k++) {
+    for (int i = 0; i < (1 << 20); i++) if ((i >> k) & 1) {
+        f[i] = f[i] + f[i ^ (1 << k)];
+    }
+}
+```
+高维差分
+```cpp
+for (int k = 0; k < 20; k++) {
+    for (int i = 0; i < (1 << 20); i++) if ((i >> k) & 1) {
+        f[i] = f[i] - f[i ^ (1 << k)];
+    }
+}
+```
 == 线性基
 ```cpp
 struct LinerBasis {
@@ -1550,6 +1574,9 @@ namespace Gauss {
 
 = 多项式
 == NTT
+
+这个板子很慢
+
 ```cpp
 #include <bits/stdc++.h>
 using namespace std;
